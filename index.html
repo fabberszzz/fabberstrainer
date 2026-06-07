@@ -238,24 +238,50 @@ const T={
 const ORDER=["Push A","Legs A","Pull A","Push B","Legs B","Pull B"];
 let hist=[],cur={treino:null,exIdx:0,data:{}},currentUser=null;
 
-function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function show(id){
+  try {
+    console.log("[SHOW] Mudando para tela:", id);
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    const screenEl = document.getElementById(id);
+    if(!screenEl) {
+      console.error("[SHOW ERROR] Elemento não encontrado:", id);
+      return;
+    }
+    screenEl.classList.add('active');
+    console.log("[SHOW OK] Tela ativa:", id);
+  } catch(err) {
+    console.error("[SHOW EXCEPTION]", err);
+  }
+}
 
 async function handleAuth(type, event){
-  if(event) event.preventDefault();
-  const email = document.getElementById('auth-email').value.trim();
-  const password = document.getElementById('auth-password').value;
-  const rememberMe = document.getElementById('auth-remember').checked;
-  const errorEl = document.getElementById('auth-error');
-  const successEl = document.getElementById('auth-success');
-  errorEl.textContent = "";
-  successEl.textContent = "";
-
-  if(!email || !password) { errorEl.textContent = "Por favor, preencha todos os campos."; return; }
-  if(password.length < 6) { errorEl.textContent = "A senha deve ter pelo menos 6 caracteres."; return; }
-
   try {
+    console.log("[HANDLE AUTH] Iniciado com type:", type);
+    if(event) event.preventDefault();
+    
+    const emailEl = document.getElementById('auth-email');
+    const passwordEl = document.getElementById('auth-password');
+    
+    if(!emailEl || !passwordEl) {
+      console.error("[HANDLE AUTH] Elementos de input não encontrados");
+      return;
+    }
+    
+    const email = emailEl.value.trim();
+    const password = passwordEl.value;
+    const rememberMe = document.getElementById('auth-remember').checked;
+    const errorEl = document.getElementById('auth-error');
+    const successEl = document.getElementById('auth-success');
+    
+    errorEl.textContent = "";
+    successEl.textContent = "";
+
+    if(!email || !password) { errorEl.textContent = "Por favor, preencha todos os campos."; return; }
+    if(password.length < 6) { errorEl.textContent = "A senha deve ter pelo menos 6 caracteres."; return; }
+
     let res;
     if(type === 'signup'){
+      console.log("[HANDLE AUTH] Signup para:", email);
       res = await supabaseClient.auth.signUp({email, password});
       if(res.error) {
         errorEl.textContent = "Erro ao criar conta: " + res.error.message;
@@ -264,45 +290,47 @@ async function handleAuth(type, event){
         setTimeout(() => { document.getElementById('auth-email').value = email; }, 500);
       }
     } else {
-      console.log("Tentando login com:", email);
+      console.log("[HANDLE AUTH] Login para:", email);
       res = await supabaseClient.auth.signInWithPassword({email, password});
-      console.log("Resposta de login:", res);
+      console.log("[HANDLE AUTH] Resposta:", res);
       
       if(res.error) {
+        console.error("[HANDLE AUTH] Erro de login:", res.error);
         errorEl.textContent = "Erro ao entrar: " + res.error.message;
-        console.error("Erro de login:", res.error);
       } else if(res.data?.session){
-        console.log("Login bem-sucedido! Sessão:", res.data.session);
+        console.log("[HANDLE AUTH] ✓ Session obtida!", res.data.session.user.email);
         successEl.textContent = "Login realizado! Entrando...";
         
-        // Salvar opção de "Manter Conectado"
         if(rememberMe) {
           localStorage.setItem('keep_logged_in', 'true');
           localStorage.setItem('auth_email', email);
+          console.log("[HANDLE AUTH] Manter conectado ativado");
         } else {
           localStorage.removeItem('keep_logged_in');
           localStorage.removeItem('auth_email');
         }
         
-        // NÃO confiar apenas no onAuthStateChange - fazer manualmente também
         currentUser = res.data.session.user;
-        console.log("[MANUAL LOGIN] CurrentUser definido:", currentUser.email);
+        console.log("[HANDLE AUTH] currentUser setado:", currentUser.email);
         
-        console.log("[MANUAL LOGIN] Carregando histórico...");
+        console.log("[HANDLE AUTH] Carregando histórico...");
         await loadH();
-        console.log("[MANUAL LOGIN] Histórico carregado, renderizando home...");
+        console.log("[HANDLE AUTH] Histórico OK, renderizando...");
+        
         renderHome();
-        console.log("[MANUAL LOGIN] Home renderizado, mudando tela...");
+        console.log("[HANDLE AUTH] Home renderizado, mudando tela...");
+        
         show('s-home');
-        console.log("[MANUAL LOGIN] ✓ Login completado!");
+        console.log("[HANDLE AUTH] ✓✓✓ Login completado com sucesso!");
       } else {
+        console.warn("[HANDLE AUTH] Sem session na resposta:", res);
         errorEl.textContent = "Erro: Nenhuma sessão retornada";
-        console.warn("Sem sessão na resposta:", res);
       }
     }
   } catch(err) {
-    errorEl.textContent = "Ocorreu um erro inesperado na conexão.";
-    console.error("Erro de autenticação:", err);
+    console.error("[HANDLE AUTH EXCEPTION]", err);
+    const errorEl = document.getElementById('auth-error');
+    if(errorEl) errorEl.textContent = "Erro: " + err.message;
   }
 }
 
@@ -398,35 +426,74 @@ async function loadH(){
   }
 }
 
-function getNext(){if(!hist.length)return ORDER[0];return ORDER[(ORDER.indexOf(hist[0].treino)+1)%ORDER.length];}
+function getNext(){
+  try {
+    if(!hist.length) {
+      console.log("[GET NEXT] Sem histórico, retornando Push A");
+      return ORDER[0];
+    }
+    const nextIdx = (ORDER.indexOf(hist[0].treino)+1)%ORDER.length;
+    console.log("[GET NEXT] Próximo treino:", ORDER[nextIdx]);
+    return ORDER[nextIdx];
+  } catch(err) {
+    console.error("[GET NEXT ERROR]", err);
+    return ORDER[0];
+  }
+}
 
 function renderHome(){
-  if(!currentUser) {
-    console.warn("[RENDER HOME] Sem usuário, redirecionando para login");
-    show('s-auth');
-    return;
-  }
-  
-  const next=getNext();
-  const vol=hist.length?hist[0].exercicios?.flatMap(e=>e.series.filter(s=>s.t==='V'&&s.kg&&s.reps)).reduce((a,s)=>a+parseFloat(s.kg)*parseFloat(s.reps),0):0;
-  document.getElementById('home-stats').innerHTML=`
+  try {
+    console.log("[RENDER HOME] Iniciando...");
+    if(!currentUser) {
+      console.warn("[RENDER HOME] Sem usuário, redirecionando para login");
+      show('s-auth');
+      return;
+    }
+    
+    console.log("[RENDER HOME] Usuário:", currentUser.email);
+    const next=getNext();
+    console.log("[RENDER HOME] Próximo:", next);
+    
+    const vol=hist.length?hist[0].exercicios?.flatMap(e=>e.series.filter(s=>s.t==='V'&&s.kg&&s.reps)).reduce((a,s)=>a+parseFloat(s.kg)*parseFloat(s.reps),0):0;
+    console.log("[RENDER HOME] Volume último treino:", vol);
+    
+    const statsHTML=`
     <div class="stat-box"><div class="stat-num">${hist.length}</div><div class="stat-lbl">Sessões</div></div>
     <div class="stat-box"><div class="stat-num acc">${next}</div><div class="stat-lbl">Próximo</div></div>
     <div class="stat-box"><div class="stat-num">${vol?Math.round(vol).toLocaleString('pt-BR'):'-'}</div><div class="stat-lbl">Últ. vol. kg</div></div>`;
-  let h='';
-  ORDER.forEach(nm=>{
-    const td=T[nm],isNext=nm===next,cnt=hist.filter(x=>x.treino===nm).length;
-    const abbr=nm.replace(' ','');
-    h+=`<button class="treino-card${isNext?' next':''}" onclick="startTreino('${nm}')">
-      <div class="treino-dot" style="background:${td.dot.bg};color:${td.dot.fg}">${abbr}</div>
-      <div style="min-width:0;flex:1">
-        <div class="treino-name">${nm}${isNext?'<span class="next-pill">hoje</span>':''}</div>
-        <div class="treino-sub">${td.sub}</div>
-      </div>
-      <div class="treino-count">${cnt}×</div>
-    </button>`;
-  });
-  document.getElementById('treino-list').innerHTML=h;
+    
+    const statsEl = document.getElementById('home-stats');
+    if(!statsEl) {
+      console.error("[RENDER HOME] home-stats não encontrado");
+      return;
+    }
+    statsEl.innerHTML = statsHTML;
+    console.log("[RENDER HOME] Stats renderizados");
+    
+    let h='';
+    ORDER.forEach(nm=>{
+      const td=T[nm],isNext=nm===next,cnt=hist.filter(x=>x.treino===nm).length;
+      const abbr=nm.replace(' ','');
+      h+=`<button class="treino-card${isNext?' next':''}" onclick="startTreino('${nm}')">
+        <div class="treino-dot" style="background:${td.dot.bg};color:${td.dot.fg}">${abbr}</div>
+        <div style="min-width:0;flex:1">
+          <div class="treino-name">${nm}${isNext?'<span class="next-pill">hoje</span>':''}</div>
+          <div class="treino-sub">${td.sub}</div>
+        </div>
+        <div class="treino-count">${cnt}×</div>
+      </button>`;
+    });
+    
+    const treinoEl = document.getElementById('treino-list');
+    if(!treinoEl) {
+      console.error("[RENDER HOME] treino-list não encontrado");
+      return;
+    }
+    treinoEl.innerHTML=h;
+    console.log("[RENDER HOME] ✓ Home renderizado com sucesso!");
+  } catch(err) {
+    console.error("[RENDER HOME EXCEPTION]", err);
+  }
 }
 
 function startTreino(nm){
