@@ -133,8 +133,8 @@
     <input type="email" id="auth-email" class="login-input" placeholder="Seu e-mail">
     <input type="password" id="auth-password" class="login-input" placeholder="Sua senha">
     <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn btn-ghost" style="padding:10px" onclick="handleAuth('signup')">Criar Conta</button>
-      <button class="btn btn-acc" style="padding:10px" onclick="handleAuth('login')">Entrar</button>
+      <button class="btn btn-ghost" style="padding:10px" onclick="handleAuth('signup', event)">Criar Conta</button>
+      <button class="btn btn-acc" style="padding:10px" onclick="handleAuth('login', event)">Entrar</button>
     </div>
     <div id="auth-error" style="color:var(--red);font-size:13px;margin-top:12px;font-weight:500;"></div>
   </div>
@@ -247,7 +247,10 @@ let hist=[],cur={treino:null,exIdx:0,data:{}},currentUser=null;
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 
 // Autenticação Ajustada e Pronta para Erros Visíveis
-async function handleAuth(type){
+async function handleAuth(type, event){
+  // Se o navegador passar o evento do botão, nós impedimos ele de recarregar a página
+  if(event) event.preventDefault();
+
   const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
   const errorEl = document.getElementById('auth-error');
