@@ -428,24 +428,38 @@ let authInitialized = false;
 
 async function initializeAuth() {
   if(authInitialized) return;
+  authInitialized = true;
   
-  console.log("[INIT AUTH] Aguardando Supabase restaurar sessão...");
+  console.log("[INIT AUTH] Iniciando...");
   
-  // Dar tempo para onAuthStateChange disparar com sessão restaurada
-  await new Promise(r => setTimeout(r, 1000));
+  // Estratégia agressiva: esperar pouco tempo por sessão rápida
+  // Se carregar em 300ms, mostra logo; se não, ativa splash até 1.2s
+  const quickCheck = new Promise(r => setTimeout(r, 300));
+  const maxWait = new Promise(r => setTimeout(r, 1200));
   
-  console.log("[INIT AUTH] Timeout de espera completado");
-  console.log("[INIT AUTH] currentUser:", currentUser?.email);
+  // Phase 1: Quick check (300ms)
+  await quickCheck;
+  console.log("[INIT AUTH] Phase 1 ok, currentUser:", currentUser?.email);
   
-  // Se ainda não tem sessão após espera, mostrar login
+  if(currentUser) {
+    // Sessão restaurada rapidamente - não precisa de splash!
+    console.log("[INIT AUTH] ✓ Sessão restaurada rápido, pulando splash");
+    return;
+  }
+  
+  // Phase 2: Se não achou, esperar mais até 1.2s total
+  console.log("[INIT AUTH] Phase 2 iniciada, esperando até 1.2s...");
+  await maxWait;
+  
+  console.log("[INIT AUTH] Phase 2 completa, currentUser:", currentUser?.email);
+  
+  // Se ainda não tem sessão, mostrar login
   if(!currentUser) {
     console.log("[INIT AUTH] Nenhuma sessão encontrada, mostrando tela de login");
     show('s-auth');
   } else {
     console.log("[INIT AUTH] ✓ Sessão foi restaurada");
   }
-  
-  authInitialized = true;
 }
 
 // Executar assim que DOM estiver pronto
