@@ -42,7 +42,7 @@
   }
   body{background:var(--ink);color:var(--txt);font-family:'Barlow',sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
   .cond{font-family:'Barlow Condensed',sans-serif}
-  .screen{display:none;padding:0.8rem}
+  .screen{display:none;padding:1rem 1rem 3rem}
   .screen.active{display:block}
 
   /* Tela de Login */
@@ -54,21 +54,20 @@
   .topbar-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;letter-spacing:.02em;color:var(--txt);flex:1;text-transform:uppercase}
   .btn-back{background:none;border:none;color:var(--sub);font-size:24px;cursor:pointer;padding:0;line-height:1;display:flex;align-items:center}
 
-  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:0.8rem}
-  .stat-box{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);padding:10px 8px;text-align:center}
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1.2rem}
+  .stat-box{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);padding:12px 10px;text-align:center}
   .stat-num{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;color:var(--txt);line-height:1}
   .stat-lbl{font-size:11px;color:var(--sub);margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
   .stat-num.acc{color:var(--acc)}
 
-  .section-label{font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.3rem}
+  .section-label{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.6rem}
 
-  .treino-card{width:100%;display:flex;align-items:center;gap:12px;background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);padding:12px;margin-bottom:6px;cursor:pointer;text-align:left;transition:border-color .15s,background .15s}
-  #treino-list{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .treino-card{width:100%;display:flex;align-items:center;gap:12px;background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:8px;cursor:pointer;text-align:left;transition:border-color .15s,background .15s}
   .treino-card:active{background:var(--ink3)}
   .treino-card.next{border-color:var(--acc);border-width:1.5px}
   .treino-dot{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.03em}
-  .treino-name{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.04em}
-  .treino-sub{font-size:11px;color:var(--sub);margin-top:0px}
+  .treino-name{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.04em}
+  .treino-sub{font-size:12px;color:var(--sub);margin-top:1px}
   .treino-count{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--muted);margin-left:auto;white-space:nowrap}
   .next-pill{display:inline-block;font-size:10px;font-weight:700;background:var(--acc);color:var(--ink);border-radius:4px;padding:1px 7px;margin-left:6px;letter-spacing:.06em;text-transform:uppercase;vertical-align:middle}
 
@@ -136,16 +135,7 @@
 </head>
 <body>
 
-<div id="s-splash" class="screen active" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--ink)">
-  <div style="text-align:center;color:var(--txt)">
-    <div style="width:40px;height:40px;border:2px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1rem" />
-  </div>
-</div>
-<style>
-@keyframes spin { to { transform:rotate(360deg) } }
-</style>
-
-<div id="s-auth" class="screen">
+<div id="s-auth" class="screen active">
   <div class="login-container">
     <h2 class="cond" style="font-size:24px;margin-bottom:1.5rem;text-transform:uppercase;letter-spacing:1px">Diário de Treino Cloud</h2>
     <input type="email" id="auth-email" class="login-input" placeholder="Seu e-mail">
@@ -203,11 +193,14 @@
 </div>
 
 <script>
+<script>
 // IMPORTANTE: Limpar cache do Service Worker IMEDIATAMENTE
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(registrations => {
+    console.log("[SW CLEANUP] Encontrados", registrations.length, "service workers");
     for(let registration of registrations) {
-      registration.unregister();
+      registration.unregister().then(() => {
+        console.log("[SW CLEANUP] ✓ Service Worker desregistrado");
       });
     }
   });
@@ -216,12 +209,13 @@ if ('serviceWorker' in navigator) {
 // Limpar cache do navegador
 if ('caches' in window) {
   caches.keys().then(names => {
+    console.log("[CACHE CLEANUP] Encontrados", names.length, "caches");
     names.forEach(name => {
-      caches.delete(name);
+      caches.delete(name).then(() => {
+        console.log("[CACHE CLEANUP] ✓ Cache deletado:", name);
+      });
     });
-  });
-}
-</script>
+  </script>
 
 <script>
 // CONFIGURAÇÃO SUPABASE
@@ -387,7 +381,7 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
         console.log("[AUTH STATE CHANGE] Carregando histórico...");
         await Promise.race([
           loadH(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("loadH timeout")), 10000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error("loadH timeout")), 5000))
         ]);
         console.log("[AUTH STATE CHANGE] ✓ Histórico carregado");
       } catch(hErr) {
@@ -406,21 +400,21 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
       // Marcar que autenticação completou
       authInitialized = true;
     } else {
-      console.log("[AUTH STATE CHANGE] ✓ SIGNED_OUT ou sem sessão");
+      console.log("[AUTH STATE CHANGE] ✓ SIGNED_OUT");
       currentUser = null;
-      
-      // Se já inicializou, mostrar login
-      if(authInitialized) {
-        console.log("[AUTH STATE CHANGE] User logged out, mostrando login");
+      // Só mostrar login se estamos realmente inicializando (não no meio de logout)
+      if(!authInitialized) {
+        console.log("[AUTH STATE CHANGE] Showing login screen (initial load)");
+        show('s-auth');
+      } else {
+        console.log("[AUTH STATE CHANGE] User logged out, showing login");
         show('s-auth');
         authInitialized = false;
-      } else {
-        // Ainda está inicializando, manter splash
-        console.log("[AUTH STATE CHANGE] Ainda inicializando, mantendo splash");
       }
     }
   } catch(err) {
     console.error("[AUTH STATE CHANGE EXCEPTION]", err.message, err);
+    show('s-auth');
   }
 });
 
@@ -431,41 +425,23 @@ async function initializeAuth() {
   if(authInitialized) return;
   authInitialized = true;
   
-  console.log("[INIT AUTH] Iniciando...");
+  console.log("[INIT AUTH] Aguardando Supabase restaurar sessão...");
   
-  // Estratégia agressiva: esperar pouco tempo por sessão rápida
-  // Se carregar em 300ms, mostra logo; se não, ativa splash até 1.2s
-  const quickCheck = new Promise(r => setTimeout(r, 300));
-  const maxWait = new Promise(r => setTimeout(r, 1200));
+  // Dar tempo para onAuthStateChange dispara com sessão restaurada
+  await new Promise(r => setTimeout(r, 1000));
   
-  // Phase 1: Quick check (300ms)
-  await quickCheck;
-  console.log("[INIT AUTH] Phase 1 ok, currentUser:", currentUser?.email);
-  
-  if(currentUser) {
-    // Sessão restaurada rapidamente - não precisa de splash!
-    console.log("[INIT AUTH] ✓ Sessão restaurada rápido, pulando splash");
-    return;
-  }
-  
-  // Phase 2: Se não achou, esperar mais até 1.2s total
-  console.log("[INIT AUTH] Phase 2 iniciada, esperando até 1.2s...");
-  await maxWait;
-  
-  console.log("[INIT AUTH] Phase 2 completa, currentUser:", currentUser?.email);
-  
-  // Se ainda não tem sessão, mostrar login
+  // Se ainda não tem sessão ativa, mostrar login
   if(!currentUser) {
-    console.log("[INIT AUTH] Nenhuma sessão encontrada, mostrando tela de login");
+    console.log("[INIT AUTH] Sem sessão após espera, mostrando login");
     show('s-auth');
   } else {
-    console.log("[INIT AUTH] ✓ Sessão foi restaurada");
+    console.log("[INIT AUTH] ✓ Sessão restaurada durante espera");
   }
 }
 
 // Executar assim que DOM estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
-  console.log("[DOM READY] Inicializando autenticação com splash screen");
+  console.log("[DOM READY] Inicializando autenticação");
   initializeAuth();
 });
 
