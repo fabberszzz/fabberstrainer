@@ -135,12 +135,14 @@
 </head>
 <body>
 
-<div id="s-splash" class="screen active" style="display:flex;align-items:center;justify-content:center;min-height:100vh">
+<div id="s-splash" class="screen active" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--ink)">
   <div style="text-align:center;color:var(--txt)">
-    <div class="cond" style="font-size:32px;margin-bottom:1rem">Carregando...</div>
-    <div style="color:var(--sub)">Restaurando sessão...</div>
+    <div style="width:40px;height:40px;border:2px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1rem" />
   </div>
 </div>
+<style>
+@keyframes spin { to { transform:rotate(360deg) } }
+</style>
 
 <div id="s-auth" class="screen">
   <div class="login-container">
@@ -430,7 +432,7 @@ async function initializeAuth() {
   console.log("[INIT AUTH] Aguardando Supabase restaurar sessão...");
   
   // Dar tempo para onAuthStateChange disparar com sessão restaurada
-  await new Promise(r => setTimeout(r, 2000));
+  await new Promise(r => setTimeout(r, 1000));
   
   console.log("[INIT AUTH] Timeout de espera completado");
   console.log("[INIT AUTH] currentUser:", currentUser?.email);
