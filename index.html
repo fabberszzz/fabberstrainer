@@ -292,6 +292,7 @@ async function handleAuth(type, event){
 }
 
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
+  console.log("Auth state changed:", event, !!session);
   if (session) {
     currentUser = session.user;
     await loadH();
@@ -303,14 +304,27 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
   }
 });
 
-// Restaurar sessão ao carregar a página se "Manter Conectado" estava ativo
-window.addEventListener('load', async () => {
+// IMPORTANTE: Restaurar sessão ao carregar a página
+// Isso DEVE ser feito antes de qualquer outro código
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log("Página carregada, tentando restaurar sessão...");
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
+    console.log("Sessão recuperada:", !!session);
+    // Se houver sessão, o onAuthStateChange será disparado automaticamente
+    // Se não houver, mas "keep_logged_in" está ativo, tentar restaurar
     if(!session && localStorage.getItem('keep_logged_in') === 'true'){
-      // Sessão expirou mas usuário quer manter conectado
-      // Supabase vai tentar restaurar automaticamente via token
-      console.log("Tentando restaurar sessão persistida...");
+      console.log("Tentando restaurar com token persistido...");
+      // Aguardar um pouco para Supabase tentar restaurar via cookies
+      await new Promise(r => setTimeout(r, 500));
+      const { data: { session: newSession } } = await supabaseClient.auth.getSession();
+      if(newSession) {
+        console.log("Sessão restaurada com sucesso!");
+        currentUser = newSession.user;
+        await loadH();
+        renderHome();
+        show('s-home');
+      }
     }
   } catch(err) {
     console.error("Erro ao restaurar sessão:", err);
@@ -423,7 +437,7 @@ function renderEx(){
     </div>
     ${rows}
     <div class="obs-wrap">
-      <textarea class="obs-inp" rows="2" placeholder="Observações..." oninput="setObs(${idx},this.value)">${series[0].obs||''}</textarea>
+      <textarea id="obs-${idx}" class="obs-inp" rows="2" placeholder="Observações..." oninput="setObs(${idx},this.value)">${series[0]?.obs||''}</textarea>
     </div>
   </div>`;
 
@@ -444,15 +458,26 @@ function setS(ei,si,f,v){
     el.className='prev-val '+(isPR?'pr':'has');
   }
 }
-function setObs(ei,v){cur.data[ei].forEach(s=>s.obs=v);}
+function setObs(ei,v){
+  if(!cur.data[ei]) return;
+  cur.data[ei].forEach(s=>s.obs=v);
+  console.log("Observação salva para exercício", ei, ":", v);
+}
 function navEx(d){const t=T[cur.treino].ex.length,n=cur.exIdx+d;if(n<0||n>=t)return;cur.exIdx=n;renderEx();}
 
 async function finishTreino() {
   const btn = document.querySelector('.btn-finish');
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "Salvando...";
+  if (btn.disabled) return; // Previne cliques duplos
+  
+  // Capturar observação do textarea ANTES de salvar
+  const obsTextarea = document.querySelector('.obs-inp');
+  if(obsTextarea) {
+    const obsValue = obsTextarea.value;
+    setObs(cur.exIdx, obsValue); // Garantir que está salvo
   }
+  
+  btn.disabled = true;
+  btn.textContent = "Salvando...";
 
   const ex = T[cur.treino].ex;
   const novoTreino = {
@@ -462,6 +487,10 @@ async function finishTreino() {
     exercicios: ex.map((e, i) => ({ nome: e.n, series: cur.data[i] }))
   };
 
+  console.log("Salvando treino:", novoTreino);
+  
+  let success = false;
+  
   if (currentUser) {
     try {
       const { error } = await supabaseClient
@@ -471,31 +500,34 @@ async function finishTreino() {
         ]);
 
       if (error) {
-        alert("Erro ao salvar no Supabase: " + error.message);
-        console.error(error);
-        if (btn) {
+        console.error("Erro ao salvar:", error);
+        btn.textContent = "❌ Erro ao salvar";
+        setTimeout(() => {
           btn.disabled = false;
           btn.textContent = "Finalizar treino";
-        }
+        }, 2000);
       } else {
-        alert("✓ Treino salvo com sucesso na nuvem! 💪");
+        success = true;
+        btn.textContent = "✓ Salvo!";
+        await new Promise(r => setTimeout(r, 1000));
         await loadH();
         goHome();
       }
     } catch (err) {
-      alert("Erro inesperado na conexão ao salvar.");
-      console.error(err);
-      if (btn) {
+      console.error("Erro inesperado:", err);
+      btn.textContent = "❌ Erro na conexão";
+      setTimeout(() => {
         btn.disabled = false;
         btn.textContent = "Finalizar treino";
-      }
+      }, 2000);
     }
   } else {
-    alert("⚠️ Usuário não identificado. Faça o login novamente.");
-    if (btn) {
+    console.warn("Usuário não identificado");
+    btn.textContent = "❌ Faça login";
+    setTimeout(() => {
       btn.disabled = false;
       btn.textContent = "Finalizar treino";
-    }
+    }, 2000);
   }
 }
 
