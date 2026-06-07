@@ -5,12 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Meu Diário de Treino</title>
   
-  <link rel="manifest" href="manifest.json">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Treino">
-  
-  <!-- Script do Supabase CDN Ultra-Compatível -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js"></script>
   
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
@@ -126,7 +120,6 @@
 </head>
 <body>
 
-<!-- TELA DE AUTENTICAÇÃO -->
 <div id="s-auth" class="screen active">
   <div class="login-container">
     <h2 class="cond" style="font-size:24px;margin-bottom:1.5rem;text-transform:uppercase;letter-spacing:1px">Diário de Treino Cloud</h2>
@@ -140,7 +133,6 @@
   </div>
 </div>
 
-<!-- TELA HOME -->
 <div id="s-home" class="screen">
   <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0 1rem;border-bottom:1px solid var(--line);margin-bottom:1.1rem">
     <div>
@@ -154,7 +146,6 @@
   <div id="treino-list"></div>
 </div>
 
-<!-- TELA DO TREINO EM ANDAMENTO -->
 <div id="s-treino" class="screen">
   <div class="topbar">
     <button class="btn-back" onclick="goHome()">←</button>
@@ -171,7 +162,6 @@
   <button class="btn-finish" onclick="finishTreino()">Finalizar treino</button>
 </div>
 
-<!-- TELA HISTÓRICO -->
 <div id="s-hist" class="screen">
   <div class="topbar">
     <button class="btn-back" onclick="goHome()">←</button>
@@ -183,11 +173,10 @@
 </div>
 
 <script>
-// CONFIGURAÇÃO SUPABASE — CONEXÃO GLOBAL CORRIGIDA
+// CONFIGURAÇÃO SUPABASE
 const SUPABASE_URL = "https://okxxfbepdgzaugjcjlyr.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9reHhmYmVwZGd6YXVnamNqbHlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NTA0NzUsImV4cCI6MjA5NjQyNjQ3NX0.xnOHV2aXTyggCfE2P60yWYqbYD8_YBTY_gWkfHt5rfo";
 
-// Inicializa usando o escopo global da janela de forma ultra-segura
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const T={
@@ -246,11 +235,8 @@ let hist=[],cur={treino:null,exIdx:0,data:{}},currentUser=null;
 
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 
-// Autenticação Ajustada e Pronta para Erros Visíveis
 async function handleAuth(type, event){
-  // Se o navegador passar o evento do botão, nós impedimos ele de recarregar a página
   if(event) event.preventDefault();
-
   const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
   const errorEl = document.getElementById('auth-error');
@@ -280,7 +266,6 @@ async function handleAuth(type, event){
   }
 }
 
-// Observador do Login do Usuário
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
   if (session) {
     currentUser = session.user;
@@ -295,7 +280,6 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
 
 async function logout(){ await supabaseClient.auth.signOut(); }
 
-// Carregar Histórico do Supabase
 async function loadH(){
   if(!currentUser) return;
   try {
@@ -303,7 +287,7 @@ async function loadH(){
       .from('historico_treino')
       .select('dados_treino')
       .eq('user_id', currentUser.id)
-      .order('created_at', { ascending: false });
+      .order('id', { ascending: false });
 
     if(!error && data){
       hist = data.map(item => item.dados_treino);
@@ -420,9 +404,7 @@ function setS(ei,si,f,v){
 function setObs(ei,v){cur.data[ei].forEach(s=>s.obs=v);}
 function navEx(d){const t=T[cur.treino].ex.length,n=cur.exIdx+d;if(n<0||n>=t)return;cur.exIdx=n;renderEx();}
 
-// SUBSTITUA A FUNÇÃO FINISH_TREINO POR ESTA:
 async function finishTreino() {
-  // Desativa o botão temporariamente para evitar cliques duplos
   const btn = document.querySelector('.btn-finish');
   if (btn) {
     btn.disabled = true;
@@ -459,7 +441,6 @@ async function finishTreino() {
     alert("Usuário não identificado. Faça o login novamente.");
   }
 
-  // Restaura o botão e volta para a home
   if (btn) {
     btn.disabled = false;
     btn.textContent = "Finalizar treino";
@@ -485,18 +466,19 @@ function renderHist(f){
       if(!v.length)return'';
       return`<div class="hist-ex-row"><div class="hist-ex-name">${e.nome}</div><div class="hist-ex-data">${v.map(s=>`${s.kg}×${s.reps}`).join(' · ')}</div></div>`;
     }).join('');
-    return`<div class="hist-card" onclick="tog(${sess.id})">
+    // Aqui geramos um identificador único para o clique baseado nas informações do treino
+    const uniqueId = sess.id || Math.floor(Math.random() * 1000000);
+    return`<div class="hist-card" onclick="tog(${uniqueId})">
       <div class="hist-card-head">
         <div><div class="hist-treino">${sess.treino}</div><div class="hist-date">${sess.data} · ${sess.hora}</div></div>
         <div class="hist-vol">${vol?Math.round(vol).toLocaleString('pt-BR')+' kg':'—'}</div>
       </div>
-      <div class="hist-detail" id="hd-${sess.id}">${detail}</div>
+      <div class="hist-detail" id="hd-${uniqueId}">${detail}</div>
     </div>`;
   }).join('');
 }
 function tog(id){const e=document.getElementById('hd-'+id);if(e)e.style.display=e.style.display==='block'?'none':'block';}
 
-// Apagar Histórico do Supabase
 async function clearHist(){
   if(!confirm('Apagar todo o histórico online?')) return;
   if(currentUser){
@@ -504,12 +486,6 @@ async function clearHist(){
     await loadH();
     renderHist('');
   }
-}
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
-  });
 }
 </script>
 </body>
