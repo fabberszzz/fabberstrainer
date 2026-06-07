@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Treino">
   
-  <!-- Script do Supabase -->
+  <!-- Script do Supabase CDN Ultra-Compatível -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js"></script>
   
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
@@ -136,7 +136,7 @@
       <button class="btn btn-ghost" style="padding:10px" onclick="handleAuth('signup')">Criar Conta</button>
       <button class="btn btn-acc" style="padding:10px" onclick="handleAuth('login')">Entrar</button>
     </div>
-    <div id="auth-error" style="color:var(--red);font-size:12px;margin-top:10px"></div>
+    <div id="auth-error" style="color:var(--red);font-size:13px;margin-top:12px;font-weight:500;"></div>
   </div>
 </div>
 
@@ -145,7 +145,7 @@
   <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0 1rem;border-bottom:1px solid var(--line);margin-bottom:1.1rem">
     <div>
       <div class="cond" style="font-size:26px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.04em;line-height:1">Meu Treino</div>
-      <div style="font-size:11px;color:var(--sub);margin-top:3px" onclick="logout()" style="cursor:pointer;text-decoration:underline">Sair da conta</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:5px;cursor:pointer;text-decoration:underline" onclick="logout()">Sair da conta</div>
     </div>
     <button class="hist-btn" onclick="goHist()">Histórico</button>
   </div>
@@ -183,10 +183,12 @@
 </div>
 
 <script>
-// CONFIGURAÇÃO SUPABASE — COPIE E COLE ESSE BLOCO EXATO
+// CONFIGURAÇÃO SUPABASE — CONEXÃO GLOBAL CORRIGIDA
 const SUPABASE_URL = "https://okxxfbepdgzaugjcjlyr.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9reHhmYmVwZGd6YXVnamNqbHlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NTA0NzUsImV4cCI6MjA5NjQyNjQ3NX0.xnOHV2aXTyggCfE2P60yWYqbYD8_YBTY_gWkfHt5rfo";
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Inicializa usando o escopo global da janela de forma ultra-segura
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const T={
   "Push A":{sub:"Peito · Ombro · Tríceps",dot:{bg:"#3D1F1F",fg:"#FF7070"},ex:[
@@ -244,28 +246,39 @@ let hist=[],cur={treino:null,exIdx:0,data:{}},currentUser=null;
 
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 
-// Autenticação Cloud
+// Autenticação Ajustada e Pronta para Erros Visíveis
 async function handleAuth(type){
-  const email = document.getElementById('auth-email').value;
+  const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
   const errorEl = document.getElementById('auth-error');
   errorEl.textContent = "";
 
-  if(!email || !password) { errorEl.textContent = "Preencha os campos."; return; }
+  if(!email || !password) { errorEl.textContent = "Por favor, preencha todos os campos."; return; }
+  if(password.length < 6) { errorEl.textContent = "A senha deve ter pelo menos 6 caracteres."; return; }
 
-  let res;
-  if(type === 'signup'){
-    res = await supabase.auth.signUp({email, password});
-    if(!res.error) alert("Conta criada! Já pode clicar em Entrar.");
-  } else {
-    res = await supabase.auth.signInWithPassword({email, password});
+  try {
+    let res;
+    if(type === 'signup'){
+      res = await supabaseClient.auth.signUp({email, password});
+      if(res.error) {
+        errorEl.textContent = "Erro ao criar conta: " + res.error.message;
+      } else {
+        alert("Conta criada com sucesso! Agora clique em 'Entrar'.");
+      }
+    } else {
+      res = await supabaseClient.auth.signInWithPassword({email, password});
+      if(res.error) {
+        errorEl.textContent = "Erro ao entrar: " + res.error.message;
+      }
+    }
+  } catch(err) {
+    errorEl.textContent = "Ocorreu um erro inesperado na conexão.";
+    console.error(err);
   }
-
-  if(res.error) { errorEl.textContent = res.error.message; }
 }
 
 // Observador do Login do Usuário
-supabase.auth.onAuthStateChange(async (event, session) => {
+supabaseClient.auth.onAuthStateChange(async (event, session) => {
   if (session) {
     currentUser = session.user;
     await loadH();
@@ -277,20 +290,24 @@ supabase.auth.onAuthStateChange(async (event, session) => {
   }
 });
 
-async function logout(){ await supabase.auth.signOut(); }
+async function logout(){ await supabaseClient.auth.signOut(); }
 
 // Carregar Histórico do Supabase
 async function loadH(){
   if(!currentUser) return;
-  const { data, error } = await supabase
-    .from('historico_treino')
-    .select('dados_treino')
-    .eq('user_id', currentUser.id)
-    .order('created_at', { ascending: false });
+  try {
+    const { data, error } = await supabaseClient
+      .from('historico_treino')
+      .select('dados_treino')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false });
 
-  if(!error && data){
-    hist = data.map(item => item.dados_treino);
-  } else {
+    if(!error && data){
+      hist = data.map(item => item.dados_treino);
+    } else {
+      hist = [];
+    }
+  } catch(e) {
     hist = [];
   }
 }
@@ -412,9 +429,13 @@ async function finishTreino(){
   };
 
   if(currentUser){
-    await supabase.from('historico_treino').insert([
-      { user_id: currentUser.id, dados_treino: novoTreino }
-    ]);
+    try {
+      await supabaseClient.from('historico_treino').insert([
+        { user_id: currentUser.id, dados_treino: novoTreino }
+      ]);
+    } catch(err) {
+      console.error(err);
+    }
   }
 
   await loadH();
@@ -452,7 +473,7 @@ function tog(id){const e=document.getElementById('hd-'+id);if(e)e.style.display=
 async function clearHist(){
   if(!confirm('Apagar todo o histórico online?')) return;
   if(currentUser){
-    await supabase.from('historico_treino').delete().eq('user_id', currentUser.id);
+    await supabaseClient.from('historico_treino').delete().eq('user_id', currentUser.id);
     await loadH();
     renderHist('');
   }
