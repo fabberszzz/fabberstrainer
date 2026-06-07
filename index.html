@@ -261,70 +261,65 @@ async function handleAuth(type, event){
     
     const emailEl = document.getElementById('auth-email');
     const passwordEl = document.getElementById('auth-password');
+    const errorEl = document.getElementById('auth-error');
+    const successEl = document.getElementById('auth-success');
     
-    if(!emailEl || !passwordEl) {
-      console.error("[HANDLE AUTH] Elementos de input não encontrados");
+    if(!emailEl || !passwordEl || !errorEl || !successEl) {
+      console.error("[HANDLE AUTH] Elementos não encontrados");
       return;
     }
     
     const email = emailEl.value.trim();
     const password = passwordEl.value;
     const rememberMe = document.getElementById('auth-remember').checked;
-    const errorEl = document.getElementById('auth-error');
-    const successEl = document.getElementById('auth-success');
     
     errorEl.textContent = "";
     successEl.textContent = "";
 
-    if(!email || !password) { errorEl.textContent = "Por favor, preencha todos os campos."; return; }
-    if(password.length < 6) { errorEl.textContent = "A senha deve ter pelo menos 6 caracteres."; return; }
+    if(!email || !password) { 
+      errorEl.textContent = "Por favor, preencha todos os campos."; 
+      return; 
+    }
+    if(password.length < 6) { 
+      errorEl.textContent = "A senha deve ter pelo menos 6 caracteres."; 
+      return; 
+    }
 
-    let res;
     if(type === 'signup'){
       console.log("[HANDLE AUTH] Signup para:", email);
-      res = await supabaseClient.auth.signUp({email, password});
+      const res = await supabaseClient.auth.signUp({email, password});
       if(res.error) {
         errorEl.textContent = "Erro ao criar conta: " + res.error.message;
       } else {
         successEl.textContent = "Conta criada com sucesso! Clique em 'Entrar' para acessar.";
-        setTimeout(() => { document.getElementById('auth-email').value = email; }, 500);
+        setTimeout(() => { emailEl.value = email; }, 500);
       }
     } else {
       console.log("[HANDLE AUTH] Login para:", email);
-      res = await supabaseClient.auth.signInWithPassword({email, password});
-      console.log("[HANDLE AUTH] Resposta:", res);
+      successEl.textContent = "Acessando...";
+      
+      // Salvar opção ANTES de fazer login
+      if(rememberMe) {
+        localStorage.setItem('keep_logged_in', 'true');
+        localStorage.setItem('auth_email', email);
+        console.log("[HANDLE AUTH] Manter conectado ativado");
+      } else {
+        localStorage.removeItem('keep_logged_in');
+        localStorage.removeItem('auth_email');
+      }
+      
+      // Fazer login - o onAuthStateChange vai lidar com o resto
+      const res = await supabaseClient.auth.signInWithPassword({email, password});
+      console.log("[HANDLE AUTH] Resposta recebida:", !!res.data?.session, res.error?.message);
       
       if(res.error) {
-        console.error("[HANDLE AUTH] Erro de login:", res.error);
-        errorEl.textContent = "Erro ao entrar: " + res.error.message;
-      } else if(res.data?.session){
-        console.log("[HANDLE AUTH] ✓ Session obtida!", res.data.session.user.email);
-        successEl.textContent = "Login realizado! Entrando...";
-        
-        if(rememberMe) {
-          localStorage.setItem('keep_logged_in', 'true');
-          localStorage.setItem('auth_email', email);
-          console.log("[HANDLE AUTH] Manter conectado ativado");
-        } else {
-          localStorage.removeItem('keep_logged_in');
-          localStorage.removeItem('auth_email');
-        }
-        
-        currentUser = res.data.session.user;
-        console.log("[HANDLE AUTH] currentUser setado:", currentUser.email);
-        
-        console.log("[HANDLE AUTH] Carregando histórico...");
-        await loadH();
-        console.log("[HANDLE AUTH] Histórico OK, renderizando...");
-        
-        renderHome();
-        console.log("[HANDLE AUTH] Home renderizado, mudando tela...");
-        
-        show('s-home');
-        console.log("[HANDLE AUTH] ✓✓✓ Login completado com sucesso!");
+        console.error("[HANDLE AUTH] Erro:", res.error.message);
+        errorEl.textContent = "Erro: " + res.error.message;
+        successEl.textContent = "";
       } else {
-        console.warn("[HANDLE AUTH] Sem session na resposta:", res);
-        errorEl.textContent = "Erro: Nenhuma sessão retornada";
+        // Não fazer nada aqui - deixar onAuthStateChange lidar
+        console.log("[HANDLE AUTH] ✓ Enviado para Supabase, aguardando onAuthStateChange...");
+        successEl.textContent = "Login concluído! Entrando...";
       }
     }
   } catch(err) {
@@ -335,17 +330,31 @@ async function handleAuth(type, event){
 }
 
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
-  console.log("[AUTH CHANGE]", event, "Session:", !!session);
-  if (session) {
-    currentUser = session.user;
-    console.log("[SESSÃO ATIVA]", currentUser.email);
-    await loadH();
-    renderHome();
-    show('s-home');
-  } else {
-    currentUser = null;
-    console.log("[SESSÃO INATIVA]");
-    show('s-auth');
+  try {
+    console.log("[AUTH STATE CHANGE]", event, "Session:", !!session);
+    
+    if (session) {
+      console.log("[AUTH STATE CHANGE] ✓ SIGNED_IN:", session.user.email);
+      currentUser = session.user;
+      
+      console.log("[AUTH STATE CHANGE] Carregando histórico...");
+      await loadH();
+      console.log("[AUTH STATE CHANGE] Histórico carregado");
+      
+      console.log("[AUTH STATE CHANGE] Renderizando home...");
+      renderHome();
+      console.log("[AUTH STATE CHANGE] Home renderizado");
+      
+      console.log("[AUTH STATE CHANGE] Mudando para tela home...");
+      show('s-home');
+      console.log("[AUTH STATE CHANGE] ✓ Tela mudada para home!");
+    } else {
+      console.log("[AUTH STATE CHANGE] ✓ SIGNED_OUT");
+      currentUser = null;
+      show('s-auth');
+    }
+  } catch(err) {
+    console.error("[AUTH STATE CHANGE EXCEPTION]", err);
   }
 });
 
