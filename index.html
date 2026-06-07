@@ -264,10 +264,15 @@ async function handleAuth(type, event){
         setTimeout(() => { document.getElementById('auth-email').value = email; }, 500);
       }
     } else {
+      console.log("Tentando login com:", email);
       res = await supabaseClient.auth.signInWithPassword({email, password});
+      console.log("Resposta de login:", res);
+      
       if(res.error) {
         errorEl.textContent = "Erro ao entrar: " + res.error.message;
+        console.error("Erro de login:", res.error);
       } else if(res.data?.session){
+        console.log("Login bem-sucedido! Sessão:", res.data.session);
         successEl.textContent = "Login realizado! Entrando...";
         
         // Salvar opção de "Manter Conectado"
@@ -279,56 +284,80 @@ async function handleAuth(type, event){
           localStorage.removeItem('auth_email');
         }
         
+        // NÃO confiar apenas no onAuthStateChange - fazer manualmente também
         currentUser = res.data.session.user;
+        console.log("CurrentUser definido:", currentUser.email);
         await loadH();
         renderHome();
         show('s-home');
+      } else {
+        errorEl.textContent = "Erro: Nenhuma sessão retornada";
+        console.warn("Sem sessão na resposta:", res);
       }
     }
   } catch(err) {
     errorEl.textContent = "Ocorreu um erro inesperado na conexão.";
-    console.error(err);
+    console.error("Erro de autenticação:", err);
   }
 }
 
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
-  console.log("Auth state changed:", event, !!session);
+  console.log("[AUTH CHANGE]", event, "Session:", !!session);
   if (session) {
     currentUser = session.user;
+    console.log("[SESSÃO ATIVA]", currentUser.email);
     await loadH();
     renderHome();
     show('s-home');
   } else {
     currentUser = null;
+    console.log("[SESSÃO INATIVA]");
     show('s-auth');
   }
 });
 
-// IMPORTANTE: Restaurar sessão ao carregar a página
-// Isso DEVE ser feito antes de qualquer outro código
-document.addEventListener('DOMContentLoaded', async () => {
-  console.log("Página carregada, tentando restaurar sessão...");
+// Aguardar página carregar ANTES de tentar restaurar
+let authInitialized = false;
+
+async function initializeAuth() {
+  if(authInitialized) return; // Não executar mais de uma vez
+  authInitialized = true;
+  
+  console.log("[INIT AUTH] Iniciando verificação de sessão...");
+  
   try {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    console.log("Sessão recuperada:", !!session);
-    // Se houver sessão, o onAuthStateChange será disparado automaticamente
-    // Se não houver, mas "keep_logged_in" está ativo, tentar restaurar
-    if(!session && localStorage.getItem('keep_logged_in') === 'true'){
-      console.log("Tentando restaurar com token persistido...");
-      // Aguardar um pouco para Supabase tentar restaurar via cookies
-      await new Promise(r => setTimeout(r, 500));
-      const { data: { session: newSession } } = await supabaseClient.auth.getSession();
-      if(newSession) {
-        console.log("Sessão restaurada com sucesso!");
-        currentUser = newSession.user;
-        await loadH();
-        renderHome();
-        show('s-home');
-      }
+    // Tentar obter sessão armazenada
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
+    
+    if(error) {
+      console.error("[ERROR] getSession falhou:", error);
+      return;
+    }
+    
+    console.log("[SESSÃO ATUAL]", !!session);
+    
+    if(session) {
+      console.log("[RESTAURADA] Sessão encontrada para:", session.user.email);
+      currentUser = session.user;
+      await loadH();
+      renderHome();
+      show('s-home');
+    } else {
+      console.log("[SEM SESSÃO] Mostrando tela de login");
+      // Show login screen
+      currentUser = null;
+      show('s-auth');
     }
   } catch(err) {
-    console.error("Erro ao restaurar sessão:", err);
+    console.error("[ERRO AUTH]", err);
+    show('s-auth');
   }
+}
+
+// Executar assim que DOM estiver pronto
+document.addEventListener('DOMContentLoaded', () => {
+  console.log("[DOM READY] Inicializando autenticação");
+  setTimeout(initializeAuth, 100); // Pequeno delay para garantir que Supabase está pronto
 });
 
 async function logout(){ 
@@ -338,7 +367,12 @@ async function logout(){
 }
 
 async function loadH(){
-  if(!currentUser) return;
+  console.log("[LOAD HISTORY] currentUser:", currentUser?.email);
+  if(!currentUser) {
+    console.warn("[LOAD HISTORY] Sem usuário, retornando");
+    hist = [];
+    return;
+  }
   try {
     const { data, error } = await supabaseClient
       .from('historico_treino')
@@ -346,12 +380,15 @@ async function loadH(){
       .eq('user_id', currentUser.id)
       .order('id', { ascending: false });
 
-    if(!error && data){
-      hist = data.map(item => item.dados_treino);
-    } else {
+    if(error){
+      console.error("[LOAD HISTORY ERROR]", error);
       hist = [];
+    } else {
+      console.log("[LOAD HISTORY OK]", data?.length || 0, "treinos");
+      hist = data.map(item => item.dados_treino);
     }
   } catch(e) {
+    console.error("[LOAD HISTORY EXCEPTION]", e);
     hist = [];
   }
 }
@@ -359,6 +396,12 @@ async function loadH(){
 function getNext(){if(!hist.length)return ORDER[0];return ORDER[(ORDER.indexOf(hist[0].treino)+1)%ORDER.length];}
 
 function renderHome(){
+  if(!currentUser) {
+    console.warn("[RENDER HOME] Sem usuário, redirecionando para login");
+    show('s-auth');
+    return;
+  }
+  
   const next=getNext();
   const vol=hist.length?hist[0].exercicios?.flatMap(e=>e.series.filter(s=>s.t==='V'&&s.kg&&s.reps)).reduce((a,s)=>a+parseFloat(s.kg)*parseFloat(s.reps),0):0;
   document.getElementById('home-stats').innerHTML=`
@@ -382,6 +425,11 @@ function renderHome(){
 }
 
 function startTreino(nm){
+  if(!currentUser) {
+    console.warn("[START TREINO] Sem usuário");
+    show('s-auth');
+    return;
+  }
   cur.treino=nm;cur.exIdx=0;cur.data={};
   T[nm].ex.forEach((e,i)=>{cur.data[i]=e.s.map(s=>({t:s.t,kg:'',reps:'',obs:''}));});
   document.getElementById('t-title').textContent=nm;
