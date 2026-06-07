@@ -10,6 +10,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Treino">
   
+  <!-- Script do Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
   <style>
   *{box-sizing:border-box;margin:0;padding:0}
@@ -30,13 +33,17 @@
   }
   body{background:var(--ink);color:var(--txt);font-family:'Barlow',sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
   .cond{font-family:'Barlow Condensed',sans-serif}
-  .screen{display:none;padding:0 0 3rem}
+  .screen{display:none;padding:1rem 1rem 3rem}
   .screen.active{display:block}
 
-  .topbar{display:flex;align-items:center;gap:10px;padding:1.1rem 0 1rem;border-bottom:1px solid var(--line);margin-bottom:1.1rem}
+  /* Tela de Login */
+  .login-container{max-width:320px;margin:4rem auto;text-align:center;background:var(--ink2);border:1px solid var(--line);padding:2rem;border-radius:var(--r)}
+  .login-input{width:100%;background:var(--ink3);border:1px solid var(--line);border-radius:6px;color:var(--txt);padding:10px;margin-bottom:12px;font-family:'Barlow',sans-serif}
+  .login-input:focus{outline:none;border-color:var(--acc)}
+
+  .topbar{display:flex;align-items:center;gap:10px;padding:0.1rem 0 1rem;border-bottom:1px solid var(--line);margin-bottom:1.1rem}
   .topbar-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;letter-spacing:.02em;color:var(--txt);flex:1;text-transform:uppercase}
   .btn-back{background:none;border:none;color:var(--sub);font-size:24px;cursor:pointer;padding:0;line-height:1;display:flex;align-items:center}
-  .btn-back i{font-size:22px}
 
   .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1.2rem}
   .stat-box{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);padding:12px 10px;text-align:center}
@@ -57,8 +64,6 @@
 
   .prog-bar{height:3px;background:var(--line);border-radius:3px;margin:0 0 .6rem;overflow:hidden}
   .prog-fill{height:100%;background:var(--acc);border-radius:3px;transition:width .3s}
-  .prog-info{display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem}
-  .prog-ex{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--sub);text-transform:uppercase;letter-spacing:.06em}
 
   .nav-dots{display:flex;gap:5px;justify-content:center;margin-bottom:1rem}
   .dot{width:6px;height:6px;border-radius:50%;background:var(--line)}
@@ -91,7 +96,6 @@
   .obs-wrap{padding:10px 16px;border-top:1px solid var(--line)}
   .obs-inp{width:100%;background:transparent;border:none;color:var(--sub);font-family:'Barlow',sans-serif;font-size:13px;resize:none;line-height:1.5}
   .obs-inp:focus{outline:none;color:var(--txt)}
-  .obs-inp::placeholder{color:var(--muted)}
 
   .btn-row{display:flex;gap:8px;margin-bottom:8px}
   .btn{flex:1;padding:13px;border-radius:var(--r);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border:none;transition:opacity .12s,transform .1s}
@@ -99,11 +103,10 @@
   .btn-ghost{background:var(--ink2);border:1px solid var(--line);color:var(--sub)}
   .btn-acc{background:var(--acc);color:var(--ink)}
   .btn-finish{width:100%;background:transparent;border:1px solid var(--red);color:var(--red);padding:12px;border-radius:var(--r);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
-  .btn-finish:active{background:rgba(255,68,85,.1)}
 
-  .hist-btn{background:var(--ink2);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;color:var(--sub);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+  .hist-btn{background:var(--ink2);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;color:var(--sub);letter-spacing:.06em;text-transform:uppercase}
   .filter-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:.5rem;margin-bottom:.9rem;scrollbar-width:none}
-  .filter-pill{white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid var(--line);background:var(--ink2);color:var(--sub);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:.12s}
+  .filter-pill{white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid var(--line);background:var(--ink2);color:var(--sub);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
   .filter-pill.on{background:var(--acc);color:var(--ink);border-color:var(--acc)}
 
   .hist-card{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-bottom:8px;cursor:pointer}
@@ -116,33 +119,45 @@
   .hist-ex-row:last-child{border-bottom:none}
   .hist-ex-name{font-size:13px;color:var(--txt2)}
   .hist-ex-data{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--sub);margin-top:2px}
-  .pr-tag{display:inline-block;font-size:10px;font-weight:700;background:rgba(200,255,0,.15);color:var(--acc);border-radius:4px;padding:1px 6px;margin-left:6px;letter-spacing:.05em;text-transform:uppercase}
 
   .empty{text-align:center;padding:3rem 0;color:var(--muted)}
-  .empty i{font-size:36px;display:block;margin-bottom:.75rem}
   .clr-btn{background:none;border:none;color:var(--red);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
   </style>
 </head>
 <body>
 
-<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden">App de diário de treino</h2>
+<!-- TELA DE AUTENTICAÇÃO -->
+<div id="s-auth" class="screen active">
+  <div class="login-container">
+    <h2 class="cond" style="font-size:24px;margin-bottom:1.5rem;text-transform:uppercase;letter-spacing:1px">Diário de Treino Cloud</h2>
+    <input type="email" id="auth-email" class="login-input" placeholder="Seu e-mail">
+    <input type="password" id="auth-password" class="login-input" placeholder="Sua senha">
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-ghost" style="padding:10px" onclick="handleAuth('signup')">Criar Conta</button>
+      <button class="btn btn-acc" style="padding:10px" onclick="handleAuth('login')">Entrar</button>
+    </div>
+    <div id="auth-error" style="color:var(--red);font-size:12px;margin-top:10px"></div>
+  </div>
+</div>
 
-<div id="s-home" class="screen active">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:1.2rem 0 1rem;border-bottom:1px solid var(--line);margin-bottom:1.1rem">
+<!-- TELA HOME -->
+<div id="s-home" class="screen">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0 1rem;border-bottom:1px solid var(--line);margin-bottom:1.1rem">
     <div>
       <div class="cond" style="font-size:26px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.04em;line-height:1">Meu Treino</div>
-      <div style="font-size:12px;color:var(--sub);margin-top:3px">Selecione o treino de hoje</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:3px" onclick="logout()" style="cursor:pointer;text-decoration:underline">Sair da conta</div>
     </div>
-    <button class="hist-btn" onclick="goHist()"><i class="ti ti-history" aria-hidden="true"></i> Histórico</button>
+    <button class="hist-btn" onclick="goHist()">Histórico</button>
   </div>
   <div class="stat-row" id="home-stats"></div>
   <div class="section-label">Treinos</div>
   <div id="treino-list"></div>
 </div>
 
+<!-- TELA DO TREINO EM ANDAMENTO -->
 <div id="s-treino" class="screen">
   <div class="topbar">
-    <button class="btn-back" onclick="goHome()" aria-label="Voltar"><i class="ti ti-arrow-left"></i></button>
+    <button class="btn-back" onclick="goHome()">←</button>
     <div class="topbar-title" id="t-title"></div>
     <div class="cond" style="font-size:13px;color:var(--sub);letter-spacing:.06em;text-transform:uppercase" id="t-lbl"></div>
   </div>
@@ -153,13 +168,14 @@
     <button class="btn btn-ghost" id="btn-prev" onclick="navEx(-1)">← Anterior</button>
     <button class="btn btn-acc" id="btn-next" onclick="navEx(1)">Próximo →</button>
   </div>
-  <button class="btn-finish" onclick="finishTreino()"><i class="ti ti-player-stop" aria-hidden="true"></i> Finalizar treino</button>
+  <button class="btn-finish" onclick="finishTreino()">Finalizar treino</button>
 </div>
 
+<!-- TELA HISTÓRICO -->
 <div id="s-hist" class="screen">
   <div class="topbar">
-    <button class="btn-back" onclick="goHome()" aria-label="Voltar"><i class="ti ti-arrow-left"></i></button>
-    <div class="topbar-title">Histórico</div>
+    <button class="btn-back" onclick="goHome()">←</button>
+    <div class="topbar-title">Histórico Online</div>
     <button class="clr-btn" onclick="clearHist()">Limpar</button>
   </div>
   <div class="filter-row" id="hist-filter"></div>
@@ -167,6 +183,11 @@
 </div>
 
 <script>
+// CONFIGURAÇÃO SUPABASE — SUBSITUA COM AS SUAS CHAVES
+const SUPABASE_URL = "https://okxxfbepdgzaugjcjlyr.supabase.co/rest/v1/";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9reHhmYmVwZGd6YXVnamNqbHlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NTA0NzUsImV4cCI6MjA5NjQyNjQ3NX0.xnOHV2aXTyggCfE2P60yWYqbYD8_YBTY_gWkfHt5rfo";
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 const T={
   "Push A":{sub:"Peito · Ombro · Tríceps",dot:{bg:"#3D1F1F",fg:"#FF7070"},ex:[
     {n:"Supino Inclinado no Smith",s:[{t:"F"},{t:"F"},{t:"V"},{t:"V"},{t:"V"}]},
@@ -219,29 +240,62 @@ const T={
   ]}
 };
 const ORDER=["Push A","Legs A","Pull A","Push B","Legs B","Pull B"];
-let hist=[],cur={treino:null,exIdx:0,data:{}};
+let hist=[],cur={treino:null,exIdx:0,data:{}},currentUser=null;
 
-// Fallback caso o localstorage padrão seja necessário se window.storage falhar
-const storageInterface = {
-  get: async (key) => {
-    if (window.storage && typeof window.storage.get === 'function') {
-      return await window.storage.get(key);
-    }
-    return { value: localStorage.getItem(key) };
-  },
-  set: async (key, val) => {
-    if (window.storage && typeof window.storage.set === 'function') {
-      return await window.storage.set(key, val);
-    }
-    localStorage.setItem(key, val);
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+
+// Autenticação Cloud
+async function handleAuth(type){
+  const email = document.getElementById('auth-email').value;
+  const password = document.getElementById('auth-password').value;
+  const errorEl = document.getElementById('auth-error');
+  errorEl.textContent = "";
+
+  if(!email || !password) { errorEl.textContent = "Preencha os campos."; return; }
+
+  let res;
+  if(type === 'signup'){
+    res = await supabase.auth.signUp({email, password});
+    if(!res.error) alert("Conta criada! Já pode clicar em Entrar.");
+  } else {
+    res = await supabase.auth.signInWithPassword({email, password});
   }
-};
 
-async function loadH(){try{const r=await storageInterface.get('treino-hist-v3');if(r && r.value)hist=JSON.parse(r.value);}catch(e){hist=[];}}
-async function saveH(){try{await storageInterface.set('treino-hist-v3',JSON.stringify(hist));}catch(e){}}
+  if(res.error) { errorEl.textContent = res.error.message; }
+}
+
+// Observador do Login do Usuário
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (session) {
+    currentUser = session.user;
+    await loadH();
+    renderHome();
+    show('s-home');
+  } else {
+    currentUser = null;
+    show('s-auth');
+  }
+});
+
+async function logout(){ await supabase.auth.signOut(); }
+
+// Carregar Histórico do Supabase
+async function loadH(){
+  if(!currentUser) return;
+  const { data, error } = await supabase
+    .from('historico_treino')
+    .select('dados_treino')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false });
+
+  if(!error && data){
+    hist = data.map(item => item.dados_treino);
+  } else {
+    hist = [];
+  }
+}
 
 function getNext(){if(!hist.length)return ORDER[0];return ORDER[(ORDER.indexOf(hist[0].treino)+1)%ORDER.length];}
-function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 
 function renderHome(){
   const next=getNext();
@@ -346,11 +400,27 @@ function setS(ei,si,f,v){
 function setObs(ei,v){cur.data[ei].forEach(s=>s.obs=v);}
 function navEx(d){const t=T[cur.treino].ex.length,n=cur.exIdx+d;if(n<0||n>=t)return;cur.exIdx=n;renderEx();}
 
+// Salvar Novo Treino no Supabase (Nuvem)
 async function finishTreino(){
   const ex=T[cur.treino].ex;
-  hist.unshift({id:Date.now(),treino:cur.treino,data:new Date().toLocaleDateString('pt-BR'),hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),exercicios:ex.map((e,i)=>({nome:e.n,series:cur.data[i]}))});
-  await saveH();goHome();
+  const novoTreino = {
+    id:Date.now(),
+    treino:cur.treino,
+    data:new Date().toLocaleDateString('pt-BR'),
+    hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+    exercicios:ex.map((e,i)=>({nome:e.n,series:cur.data[i]}))
+  };
+
+  if(currentUser){
+    await supabase.from('historico_treino').insert([
+      { user_id: currentUser.id, dados_treino: novoTreino }
+    ]);
+  }
+
+  await loadH();
+  goHome();
 }
+
 function goHome(){renderHome();show('s-home');}
 function goHist(){renderHist('');show('s-hist');}
 
@@ -358,7 +428,7 @@ function renderHist(f){
   const pills=['Todos',...ORDER];
   document.getElementById('hist-filter').innerHTML=pills.map(p=>`<button class="filter-pill${(f===''&&p==='Todos')||(f===p)?' on':''}" onclick="renderHist('${p==='Todos'?'':p}')">${p}</button>`).join('');
   const items=f?hist.filter(h=>h.treino===f):hist;
-  if(!items.length){document.getElementById('hist-body').innerHTML=`<div class="empty"><i class="ti ti-clipboard-list" aria-hidden="true"></i>Nenhum treino ainda</div>`;return;}
+  if(!items.length){document.getElementById('hist-body').innerHTML=`<div class="empty">Nenhum treino ainda</div>`;return;}
   document.getElementById('hist-body').innerHTML=items.map(sess=>{
     const vs=(sess.exercicios||[]).flatMap(e=>e.series.filter(s=>s.t==='V'&&s.kg&&s.reps));
     const vol=vs.reduce((a,s)=>a+parseFloat(s.kg)*parseFloat(s.reps),0);
@@ -377,18 +447,22 @@ function renderHist(f){
   }).join('');
 }
 function tog(id){const e=document.getElementById('hd-'+id);if(e)e.style.display=e.style.display==='block'?'none':'block';}
-async function clearHist(){if(!confirm('Apagar todo o histórico?'))return;hist=[];await saveH();renderHist('');}
 
-// Ativação do Service Worker do PWA
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .then(reg => console.log('PWA ativo via sw.js!', reg))
-      .catch(err => console.log('Falha ao registrar PWA:', err));
-  });
+// Apagar Histórico do Supabase
+async function clearHist(){
+  if(!confirm('Apagar todo o histórico online?')) return;
+  if(currentUser){
+    await supabase.from('historico_treino').delete().eq('user_id', currentUser.id);
+    await loadH();
+    renderHist('');
+  }
 }
 
-(async()=>{await loadH();renderHome();})();
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
+  });
+}
 </script>
 </body>
 </html>
