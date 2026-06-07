@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Diário de Treino</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Treino">
+  
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --ink:#0D0D0F;
+    --ink2:#1A1A1F;
+    --ink3:#26262E;
+    --line:#2E2E38;
+    --muted:#555566;
+    --sub:#8888A0;
+    --txt:#E8E8F0;
+    --txt2:#AAABB8;
+    --acc:#C8FF00;
+    --acc2:#00E5A0;
+    --amber:#FFB800;
+    --red:#FF4455;
+    --r:10px;
+  }
+  body{background:var(--ink);color:var(--txt);font-family:'Barlow',sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .cond{font-family:'Barlow Condensed',sans-serif}
+  .screen{display:none;padding:0 0 3rem}
+  .screen.active{display:block}
+
+  .topbar{display:flex;align-items:center;gap:10px;padding:1.1rem 0 1rem;border-bottom:1px solid var(--line);margin-bottom:1.1rem}
+  .topbar-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;letter-spacing:.02em;color:var(--txt);flex:1;text-transform:uppercase}
+  .btn-back{background:none;border:none;color:var(--sub);font-size:24px;cursor:pointer;padding:0;line-height:1;display:flex;align-items:center}
+  .btn-back i{font-size:22px}
+
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1.2rem}
+  .stat-box{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);padding:12px 10px;text-align:center}
+  .stat-num{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;color:var(--txt);line-height:1}
+  .stat-lbl{font-size:11px;color:var(--sub);margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
+  .stat-num.acc{color:var(--acc)}
+
+  .section-label{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.6rem}
+
+  .treino-card{width:100%;display:flex;align-items:center;gap:12px;background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:8px;cursor:pointer;text-align:left;transition:border-color .15s,background .15s}
+  .treino-card:active{background:var(--ink3)}
+  .treino-card.next{border-color:var(--acc);border-width:1.5px}
+  .treino-dot{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.03em}
+  .treino-name{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.04em}
+  .treino-sub{font-size:12px;color:var(--sub);margin-top:1px}
+  .treino-count{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--muted);margin-left:auto;white-space:nowrap}
+  .next-pill{display:inline-block;font-size:10px;font-weight:700;background:var(--acc);color:var(--ink);border-radius:4px;padding:1px 7px;margin-left:6px;letter-spacing:.06em;text-transform:uppercase;vertical-align:middle}
+
+  .prog-bar{height:3px;background:var(--line);border-radius:3px;margin:0 0 .6rem;overflow:hidden}
+  .prog-fill{height:100%;background:var(--acc);border-radius:3px;transition:width .3s}
+  .prog-info{display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem}
+  .prog-ex{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--sub);text-transform:uppercase;letter-spacing:.06em}
+
+  .nav-dots{display:flex;gap:5px;justify-content:center;margin-bottom:1rem}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--line)}
+  .dot.active{background:var(--acc);width:18px;border-radius:3px}
+
+  .ex-card{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:1rem}
+  .ex-head{padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+  .ex-name{font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.03em;line-height:1.1}
+  .ex-meta{font-size:12px;color:var(--sub);margin-top:4px}
+
+  .col-heads{display:grid;grid-template-columns:80px 1fr auto;gap:8px;padding:8px 16px 6px;border-bottom:1px solid var(--line)}
+  .col-head{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;text-align:center}
+  .col-head:first-child{text-align:left}
+  .col-head:last-child{text-align:right;min-width:56px}
+
+  .serie-row{display:grid;grid-template-columns:80px 1fr auto;gap:8px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line)}
+  .serie-row:last-of-type{border-bottom:none}
+  .serie-badge{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.06em;border-radius:5px;padding:3px 8px;text-align:center;text-transform:uppercase;display:inline-block}
+  .badge-f{background:rgba(255,184,0,.12);color:var(--amber);border:1px solid rgba(255,184,0,.25)}
+  .badge-v{background:rgba(0,229,160,.1);color:var(--acc2);border:1px solid rgba(0,229,160,.2)}
+  .inputs-wrap{display:flex;align-items:center;gap:6px}
+  .serie-inp{background:var(--ink3);border:1px solid var(--line);border-radius:6px;color:var(--txt);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:600;text-align:center;padding:8px 4px;width:54px;-moz-appearance:textfield}
+  .serie-inp::-webkit-inner-spin-button{display:none}
+  .serie-inp:focus{outline:none;border-color:var(--acc);background:var(--ink2)}
+  .sep{color:var(--muted);font-size:14px}
+  .prev-val{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--muted);text-align:right;min-width:56px}
+  .prev-val.has{color:var(--sub)}
+  .prev-val.pr{color:var(--acc);font-weight:700;font-size:12px}
+
+  .obs-wrap{padding:10px 16px;border-top:1px solid var(--line)}
+  .obs-inp{width:100%;background:transparent;border:none;color:var(--sub);font-family:'Barlow',sans-serif;font-size:13px;resize:none;line-height:1.5}
+  .obs-inp:focus{outline:none;color:var(--txt)}
+  .obs-inp::placeholder{color:var(--muted)}
+
+  .btn-row{display:flex;gap:8px;margin-bottom:8px}
+  .btn{flex:1;padding:13px;border-radius:var(--r);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border:none;transition:opacity .12s,transform .1s}
+  .btn:active{opacity:.8;transform:scale(.98)}
+  .btn-ghost{background:var(--ink2);border:1px solid var(--line);color:var(--sub)}
+  .btn-acc{background:var(--acc);color:var(--ink)}
+  .btn-finish{width:100%;background:transparent;border:1px solid var(--red);color:var(--red);padding:12px;border-radius:var(--r);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+  .btn-finish:active{background:rgba(255,68,85,.1)}
+
+  .hist-btn{background:var(--ink2);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;color:var(--sub);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+  .filter-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:.5rem;margin-bottom:.9rem;scrollbar-width:none}
+  .filter-pill{white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid var(--line);background:var(--ink2);color:var(--sub);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:.12s}
+  .filter-pill.on{background:var(--acc);color:var(--ink);border-color:var(--acc)}
+
+  .hist-card{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-bottom:8px;cursor:pointer}
+  .hist-card-head{display:flex;justify-content:space-between;align-items:center}
+  .hist-treino{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.04em}
+  .hist-vol{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--acc2)}
+  .hist-date{font-size:12px;color:var(--sub);margin-top:2px}
+  .hist-detail{display:none;margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+  .hist-ex-row{padding:5px 0;border-bottom:1px solid var(--line)}
+  .hist-ex-row:last-child{border-bottom:none}
+  .hist-ex-name{font-size:13px;color:var(--txt2)}
+  .hist-ex-data{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--sub);margin-top:2px}
+  .pr-tag{display:inline-block;font-size:10px;font-weight:700;background:rgba(200,255,0,.15);color:var(--acc);border-radius:4px;padding:1px 6px;margin-left:6px;letter-spacing:.05em;text-transform:uppercase}
+
+  .empty{text-align:center;padding:3rem 0;color:var(--muted)}
+  .empty i{font-size:36px;display:block;margin-bottom:.75rem}
+  .clr-btn{background:none;border:none;color:var(--red);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+  </style>
+</head>
+<body>
+
+<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden">App de diário de treino</h2>
+
+<div id="s-home" class="screen active">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:1.2rem 0 1rem;border-bottom:1px solid var(--line);margin-bottom:1.1rem">
+    <div>
+      <div class="cond" style="font-size:26px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.04em;line-height:1">Meu Treino</div>
+      <div style="font-size:12px;color:var(--sub);margin-top:3px">Selecione o treino de hoje</div>
+    </div>
+    <button class="hist-btn" onclick="goHist()"><i class="ti ti-history" aria-hidden="true"></i> Histórico</button>
+  </div>
+  <div class="stat-row" id="home-stats"></div>
+  <div class="section-label">Treinos</div>
+  <div id="treino-list"></div>
+</div>
+
+<div id="s-treino" class="screen">
+  <div class="topbar">
+    <button class="btn-back" onclick="goHome()" aria-label="Voltar"><i class="ti ti-arrow-left"></i></button>
+    <div class="topbar-title" id="t-title"></div>
+    <div class="cond" style="font-size:13px;color:var(--sub);letter-spacing:.06em;text-transform:uppercase" id="t-lbl"></div>
+  </div>
+  <div class="prog-bar"><div class="prog-fill" id="t-fill"></div></div>
+  <div class="nav-dots" id="nav-dots"></div>
+  <div id="ex-card"></div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" id="btn-prev" onclick="navEx(-1)">← Anterior</button>
+    <button class="btn btn-acc" id="btn-next" onclick="navEx(1)">Próximo →</button>
+  </div>
+  <button class="btn-finish" onclick="finishTreino()"><i class="ti ti-player-stop" aria-hidden="true"></i> Finalizar treino</button>
+</div>
+
+<div id="s-hist" class="screen">
+  <div class="topbar">
+    <button class="btn-back" onclick="goHome()" aria-label="Voltar"><i class="ti ti-arrow-left"></i></button>
+    <div class="topbar-title">Histórico</div>
+    <button class="clr-btn" onclick="clearHist()">Limpar</button>
+  </div>
+  <div class="filter-row" id="hist-filter"></div>
+  <div id="hist-body"></div>
+</div>
+
+<script>
+const T={
+  "Push A":{sub:"Peito · Ombro · Tríceps",dot:{bg:"#3D1F1F",fg:"#FF7070"},ex:[
+    {n:"Supino Inclinado no Smith",s:[{t:"F"},{t:"F"},{t:"V"},{t:"V"},{t:"V"}]},
+    {n:"Desenvolvimento no Smith",s:[{t:"F"},{t:"F"},{t:"V"},{t:"V"},{t:"V"}]},
+    {n:"Crossover na Polia",s:[{t:"V"}]},
+    {n:"Elevação Lateral",s:[{t:"V"},{t:"V"}]},
+    {n:"Tríceps Pulley",s:[{t:"F"},{t:"F"},{t:"V"}]},
+    {n:"Tríceps Testa",s:[{t:"V"}]},
+    {n:"Tríceps Francês",s:[{t:"V"}]},
+  ]},
+  "Legs A":{sub:"Quadríceps · Posterior · Panturrilha",dot:{bg:"#1A2E1A",fg:"#70CC70"},ex:[
+    {n:"Extensora",s:[{t:"F"},{t:"F"},{t:"F"},{t:"V"},{t:"V"},{t:"V"}]},
+    {n:"Mesa Flexora",s:[{t:"F"},{t:"F"},{t:"V"},{t:"V"},{t:"V"}]},
+    {n:"Hack",s:[{t:"F"},{t:"F"},{t:"V"},{t:"V"}]},
+    {n:"Adutora",s:[{t:"V"},{t:"V"}]},
+    {n:"Panturrilha Sentado",s:[{t:"V"},{t:"V"},{t:"V"}]},
+  ]},
+  "Pull A":{sub:"Dorsal · Ombro · Bíceps",dot:{bg:"#1A1F3A",fg:"#7090FF"},ex:[
+    {n:"T-Bar",s:[{t:"F"},{t:"F"},{t:"V"},{t:"V"}]},
+    {n:"Puxador",s:[{t:"V"},{t:"V"}]},
+    {n:"Pull Around",s:[{t:"V"},{t:"V"}]},
+    {n:"Rear Delt Fly",s:[{t:"V"},{t:"V"}]},
+    {n:"Rosca Alternada c/ Halteres",s:[{t:"F"},{t:"V"}]},
+    {n:"Bíceps Cepacol",s:[{t:"V"}]},
+    {n:"Martelo",s:[{t:"V"}]},
+  ]},
+  "Push B":{sub:"Peito · Ombro · Tríceps",dot:{bg:"#2E2010",fg:"#FFA040"},ex:[
+    {n:"Supino Reto c/ Halteres",s:[{t:"F"},{t:"F"},{t:"V"},{t:"V"},{t:"V"}]},
+    {n:"Crossover Peit. Clavicular",s:[{t:"V"},{t:"V"}]},
+    {n:"Desenvolvimento no Smith",s:[{t:"F"},{t:"F"},{t:"V"},{t:"V"},{t:"V"}]},
+    {n:"Elevação Lateral",s:[{t:"V"},{t:"V"}]},
+    {n:"Tríceps Pulley",s:[{t:"F"},{t:"F"},{t:"V"}]},
+    {n:"Tríceps Testa",s:[{t:"V"}]},
+    {n:"Tríceps Francês",s:[{t:"V"}]},
+  ]},
+  "Legs B":{sub:"Posterior · Quadríceps · Panturrilha",dot:{bg:"#1E2A14",fg:"#A0DD50"},ex:[
+    {n:"Elevação Pélvica",s:[{t:"F"},{t:"F"},{t:"V"},{t:"V"},{t:"V"}]},
+    {n:"Stiff",s:[{t:"F"},{t:"F"},{t:"V"},{t:"V"}]},
+    {n:"Búlgaro",s:[{t:"V"},{t:"V"}]},
+    {n:"Panturrilha em Pé",s:[{t:"V"},{t:"V"},{t:"V"}]},
+  ]},
+  "Pull B":{sub:"Dorsal · Ombro · Bíceps",dot:{bg:"#22183A",fg:"#A070FF"},ex:[
+    {n:"Puxador",s:[{t:"V"},{t:"V"}]},
+    {n:"T-Bar Polia Baixa",s:[{t:"V"},{t:"V"}]},
+    {n:"Remada Baixa",s:[{t:"V"},{t:"V"}]},
+    {n:"Rear Delt Fly",s:[{t:"V"},{t:"V"}]},
+    {n:"Rosca Alternada c/ Halteres",s:[{t:"F"},{t:"V"}]},
+    {n:"Bíceps Cepacol",s:[{t:"V"}]},
+    {n:"Martelo",s:[{t:"V"}]},
+  ]}
+};
+const ORDER=["Push A","Legs A","Pull A","Push B","Legs B","Pull B"];
+let hist=[],cur={treino:null,exIdx:0,data:{}};
+
+// Fallback caso o localstorage padrão seja necessário se window.storage falhar
+const storageInterface = {
+  get: async (key) => {
+    if (window.storage && typeof window.storage.get === 'function') {
+      return await window.storage.get(key);
+    }
+    return { value: localStorage.getItem(key) };
+  },
+  set: async (key, val) => {
+    if (window.storage && typeof window.storage.set === 'function') {
+      return await window.storage.set(key, val);
+    }
+    localStorage.setItem(key, val);
+  }
+};
+
+async function loadH(){try{const r=await storageInterface.get('treino-hist-v3');if(r && r.value)hist=JSON.parse(r.value);}catch(e){hist=[];}}
+async function saveH(){try{await storageInterface.set('treino-hist-v3',JSON.stringify(hist));}catch(e){}}
+
+function getNext(){if(!hist.length)return ORDER[0];return ORDER[(ORDER.indexOf(hist[0].treino)+1)%ORDER.length];}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+
+function renderHome(){
+  const next=getNext();
+  const vol=hist.length?hist[0].exercicios?.flatMap(e=>e.series.filter(s=>s.t==='V'&&s.kg&&s.reps)).reduce((a,s)=>a+parseFloat(s.kg)*parseFloat(s.reps),0):0;
+  document.getElementById('home-stats').innerHTML=`
+    <div class="stat-box"><div class="stat-num">${hist.length}</div><div class="stat-lbl">Sessões</div></div>
+    <div class="stat-box"><div class="stat-num acc">${next}</div><div class="stat-lbl">Próximo</div></div>
+    <div class="stat-box"><div class="stat-num">${vol?Math.round(vol).toLocaleString('pt-BR'):'-'}</div><div class="stat-lbl">Últ. vol. kg</div></div>`;
+  let h='';
+  ORDER.forEach(nm=>{
+    const td=T[nm],isNext=nm===next,cnt=hist.filter(x=>x.treino===nm).length;
+    const abbr=nm.replace(' ','');
+    h+=`<button class="treino-card${isNext?' next':''}" onclick="startTreino('${nm}')">
+      <div class="treino-dot" style="background:${td.dot.bg};color:${td.dot.fg}">${abbr}</div>
+      <div style="min-width:0;flex:1">
+        <div class="treino-name">${nm}${isNext?'<span class="next-pill">hoje</span>':''}</div>
+        <div class="treino-sub">${td.sub}</div>
+      </div>
+      <div class="treino-count">${cnt}×</div>
+    </button>`;
+  });
+  document.getElementById('treino-list').innerHTML=h;
+}
+
+function startTreino(nm){
+  cur.treino=nm;cur.exIdx=0;cur.data={};
+  T[nm].ex.forEach((e,i)=>{cur.data[i]=e.s.map(s=>({t:s.t,kg:'',reps:'',obs:''}));});
+  document.getElementById('t-title').textContent=nm;
+  renderEx();show('s-treino');
+}
+
+function getPrevS(treino,nm){
+  const sess=hist.filter(h=>h.treino===treino);
+  if(!sess.length)return null;
+  return sess[0].exercicios?.find(e=>e.nome===nm)?.series||null;
+}
+
+function renderEx(){
+  const ex=T[cur.treino].ex,total=ex.length,idx=cur.exIdx,e=ex[idx],series=cur.data[idx];
+  const prev=getPrevS(cur.treino,e.n);
+  document.getElementById('t-fill').style.width=Math.round((idx/total)*100)+'%';
+  document.getElementById('t-lbl').textContent=`${idx+1} / ${total}`;
+  let dots='';
+  for(let i=0;i<total;i++)dots+=`<div class="dot${i===idx?' active':''}"></div>`;
+  document.getElementById('nav-dots').innerHTML=dots;
+
+  const nF=series.filter(s=>s.t==='F').length,nV=series.filter(s=>s.t==='V').length;
+  let fc=0,vc=0,rows='';
+  series.forEach((s,si)=>{
+    const isF=s.t==='F';
+    if(isF)fc++;else vc++;
+    const lbl=isF?`F${fc}`:`V${vc}`;
+    const ps=prev&&prev[si];
+    let pvTxt='—',pvCls='';
+    if(ps&&ps.kg&&ps.reps){pvTxt=`${ps.kg}×${ps.reps}`;pvCls='has';}
+    const isPR=!isF&&s.kg&&ps&&ps.kg&&parseFloat(s.kg)>parseFloat(ps.kg);
+    if(isPR){pvTxt='PR!';pvCls='pr';}
+    rows+=`<div class="serie-row">
+      <span class="serie-badge ${isF?'badge-f':'badge-v'}">${lbl}</span>
+      <div class="inputs-wrap">
+        <input class="serie-inp" type="number" inputmode="decimal" placeholder="kg" value="${s.kg}" oninput="setS(${idx},${si},'kg',this.value)">
+        <span class="sep">×</span>
+        <input class="serie-inp" type="number" inputmode="numeric" placeholder="rep" value="${s.reps}" oninput="setS(${idx},${si},'reps',this.value)">
+      </div>
+      <div class="prev-val ${pvCls}" id="pv-${si}">${pvTxt}</div>
+    </div>`;
+  });
+
+  document.getElementById('ex-card').innerHTML=`<div class="ex-card">
+    <div class="ex-head">
+      <div class="ex-name">${e.n}</div>
+      <div class="ex-meta">${nF} feeder · ${nV} válida</div>
+    </div>
+    <div class="col-heads">
+      <div class="col-head">Série</div>
+      <div class="col-head">Hoje</div>
+      <div class="col-head" style="text-align:right;min-width:56px">${prev?'Anterior':''}</div>
+    </div>
+    ${rows}
+    <div class="obs-wrap">
+      <textarea class="obs-inp" rows="2" placeholder="Observações..." oninput="setObs(${idx},this.value)">${series[0].obs||''}</textarea>
+    </div>
+  </div>`;
+
+  document.getElementById('btn-prev').disabled=idx===0;
+  document.getElementById('btn-prev').style.opacity=idx===0?'.3':'1';
+  document.getElementById('btn-next').textContent=idx===total-1?'Revisar ✓':'Próximo →';
+}
+
+function setS(ei,si,f,v){
+  cur.data[ei][si][f]=v;
+  const s=cur.data[ei][si],prev=getPrevS(cur.treino,T[cur.treino].ex[ei].n);
+  const el=document.getElementById('pv-'+si);
+  if(!el)return;
+  const ps=prev&&prev[si];
+  if(ps&&ps.kg&&ps.reps){
+    const isPR=s.t==='V'&&s.kg&&parseFloat(s.kg)>parseFloat(ps.kg);
+    el.textContent=isPR?'PR!':`${ps.kg}×${ps.reps}`;
+    el.className='prev-val '+(isPR?'pr':'has');
+  }
+}
+function setObs(ei,v){cur.data[ei].forEach(s=>s.obs=v);}
+function navEx(d){const t=T[cur.treino].ex.length,n=cur.exIdx+d;if(n<0||n>=t)return;cur.exIdx=n;renderEx();}
+
+async function finishTreino(){
+  const ex=T[cur.treino].ex;
+  hist.unshift({id:Date.now(),treino:cur.treino,data:new Date().toLocaleDateString('pt-BR'),hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),exercicios:ex.map((e,i)=>({nome:e.n,series:cur.data[i]}))});
+  await saveH();goHome();
+}
+function goHome(){renderHome();show('s-home');}
+function goHist(){renderHist('');show('s-hist');}
+
+function renderHist(f){
+  const pills=['Todos',...ORDER];
+  document.getElementById('hist-filter').innerHTML=pills.map(p=>`<button class="filter-pill${(f===''&&p==='Todos')||(f===p)?' on':''}" onclick="renderHist('${p==='Todos'?'':p}')">${p}</button>`).join('');
+  const items=f?hist.filter(h=>h.treino===f):hist;
+  if(!items.length){document.getElementById('hist-body').innerHTML=`<div class="empty"><i class="ti ti-clipboard-list" aria-hidden="true"></i>Nenhum treino ainda</div>`;return;}
+  document.getElementById('hist-body').innerHTML=items.map(sess=>{
+    const vs=(sess.exercicios||[]).flatMap(e=>e.series.filter(s=>s.t==='V'&&s.kg&&s.reps));
+    const vol=vs.reduce((a,s)=>a+parseFloat(s.kg)*parseFloat(s.reps),0);
+    const detail=(sess.exercicios||[]).map(e=>{
+      const v=e.series.filter(s=>s.t==='V'&&s.kg&&s.reps);
+      if(!v.length)return'';
+      return`<div class="hist-ex-row"><div class="hist-ex-name">${e.nome}</div><div class="hist-ex-data">${v.map(s=>`${s.kg}×${s.reps}`).join(' · ')}</div></div>`;
+    }).join('');
+    return`<div class="hist-card" onclick="tog(${sess.id})">
+      <div class="hist-card-head">
+        <div><div class="hist-treino">${sess.treino}</div><div class="hist-date">${sess.data} · ${sess.hora}</div></div>
+        <div class="hist-vol">${vol?Math.round(vol).toLocaleString('pt-BR')+' kg':'—'}</div>
+      </div>
+      <div class="hist-detail" id="hd-${sess.id}">${detail}</div>
+    </div>`;
+  }).join('');
+}
+function tog(id){const e=document.getElementById('hd-'+id);if(e)e.style.display=e.style.display==='block'?'none':'block';}
+async function clearHist(){if(!confirm('Apagar todo o histórico?'))return;hist=[];await saveH();renderHist('');}
+
+// Ativação do Service Worker do PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('PWA ativo via sw.js!', reg))
+      .catch(err => console.log('Falha ao registrar PWA:', err));
+  });
+}
+
+(async()=>{await loadH();renderHome();})();
+</script>
+</body>
+</html>
