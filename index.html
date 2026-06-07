@@ -420,27 +420,52 @@ function setS(ei,si,f,v){
 function setObs(ei,v){cur.data[ei].forEach(s=>s.obs=v);}
 function navEx(d){const t=T[cur.treino].ex.length,n=cur.exIdx+d;if(n<0||n>=t)return;cur.exIdx=n;renderEx();}
 
-// Salvar Novo Treino no Supabase (Nuvem)
-async function finishTreino(){
-  const ex=T[cur.treino].ex;
-  const novoTreino = {
-    id:Date.now(),
-    treino:cur.treino,
-    data:new Date().toLocaleDateString('pt-BR'),
-    hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-    exercicios:ex.map((e,i)=>({nome:e.n,series:cur.data[i]}))
-  };
-
-  if(currentUser){
-    try {
-      await supabaseClient.from('historico_treino').insert([
-        { user_id: currentUser.id, dados_treino: novoTreino }
-      ]);
-    } catch(err) {
-      console.error(err);
-    }
+// SUBSTITUA A FUNÇÃO FINISH_TREINO POR ESTA:
+async function finishTreino() {
+  // Desativa o botão temporariamente para evitar cliques duplos
+  const btn = document.querySelector('.btn-finish');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Salvando...";
   }
 
+  const ex = T[cur.treino].ex;
+  const novoTreino = {
+    id: Date.now(),
+    treino: cur.treino,
+    data: new Date().toLocaleDateString('pt-BR'),
+    hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    exercicios: ex.map((e, i) => ({ nome: e.n, series: cur.data[i] }))
+  };
+
+  if (currentUser) {
+    try {
+      const { error } = await supabaseClient
+        .from('historico_treino')
+        .insert([
+          { user_id: currentUser.id, dados_treino: novoTreino }
+        ]);
+
+      if (error) {
+        alert("Erro ao salvar no Supabase: " + error.message);
+        console.error(error);
+      } else {
+        alert("Treino salvo com sucesso na nuvem! 💪");
+      }
+    } catch (err) {
+      alert("Erro inesperado na conexão ao salvar.");
+      console.error(err);
+    }
+  } else {
+    alert("Usuário não identificado. Faça o login novamente.");
+  }
+
+  // Restaura o botão e volta para a home
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = "Finalizar treino";
+  }
+  
   await loadH();
   goHome();
 }
