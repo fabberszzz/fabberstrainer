@@ -386,7 +386,7 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
         console.log("[AUTH STATE CHANGE] ✓ Histórico carregado");
       } catch(hErr) {
         console.error("[AUTH STATE CHANGE] Erro em loadH:", hErr.message);
-        hist = []; // Falhar gracefully
+        hist = [];
       }
       
       console.log("[AUTH STATE CHANGE] Renderizando home...");
@@ -396,13 +396,25 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
       console.log("[AUTH STATE CHANGE] Mudando para tela home...");
       show('s-home');
       console.log("[AUTH STATE CHANGE] ✓ Tela mudada para home!");
+      
+      // Marcar que autenticação completou
+      authInitialized = true;
     } else {
       console.log("[AUTH STATE CHANGE] ✓ SIGNED_OUT");
       currentUser = null;
-      show('s-auth');
+      // Só mostrar login se estamos realmente inicializando (não no meio de logout)
+      if(!authInitialized) {
+        console.log("[AUTH STATE CHANGE] Showing login screen (initial load)");
+        show('s-auth');
+      } else {
+        console.log("[AUTH STATE CHANGE] User logged out, showing login");
+        show('s-auth');
+        authInitialized = false;
+      }
     }
   } catch(err) {
     console.error("[AUTH STATE CHANGE EXCEPTION]", err.message, err);
+    show('s-auth');
   }
 });
 
@@ -410,44 +422,27 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
 let authInitialized = false;
 
 async function initializeAuth() {
-  if(authInitialized) return; // Não executar mais de uma vez
+  if(authInitialized) return;
   authInitialized = true;
   
-  console.log("[INIT AUTH] Iniciando verificação de sessão...");
+  console.log("[INIT AUTH] Aguardando Supabase restaurar sessão...");
   
-  try {
-    // Tentar obter sessão armazenada
-    const { data: { session }, error } = await supabaseClient.auth.getSession();
-    
-    if(error) {
-      console.error("[ERROR] getSession falhou:", error);
-      return;
-    }
-    
-    console.log("[SESSÃO ATUAL]", !!session);
-    
-    if(session) {
-      console.log("[RESTAURADA] Sessão encontrada para:", session.user.email);
-      currentUser = session.user;
-      await loadH();
-      renderHome();
-      show('s-home');
-    } else {
-      console.log("[SEM SESSÃO] Mostrando tela de login");
-      // Show login screen
-      currentUser = null;
-      show('s-auth');
-    }
-  } catch(err) {
-    console.error("[ERRO AUTH]", err);
+  // Dar tempo para onAuthStateChange dispara com sessão restaurada
+  await new Promise(r => setTimeout(r, 1000));
+  
+  // Se ainda não tem sessão ativa, mostrar login
+  if(!currentUser) {
+    console.log("[INIT AUTH] Sem sessão após espera, mostrando login");
     show('s-auth');
+  } else {
+    console.log("[INIT AUTH] ✓ Sessão restaurada durante espera");
   }
 }
 
 // Executar assim que DOM estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
   console.log("[DOM READY] Inicializando autenticação");
-  setTimeout(initializeAuth, 100); // Pequeno delay para garantir que Supabase está pronto
+  initializeAuth();
 });
 
 async function logout(){ 
