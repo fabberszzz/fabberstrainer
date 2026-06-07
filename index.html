@@ -337,9 +337,17 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
       console.log("[AUTH STATE CHANGE] ✓ SIGNED_IN:", session.user.email);
       currentUser = session.user;
       
-      console.log("[AUTH STATE CHANGE] Carregando histórico...");
-      await loadH();
-      console.log("[AUTH STATE CHANGE] Histórico carregado");
+      try {
+        console.log("[AUTH STATE CHANGE] Carregando histórico...");
+        await Promise.race([
+          loadH(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("loadH timeout")), 5000))
+        ]);
+        console.log("[AUTH STATE CHANGE] ✓ Histórico carregado");
+      } catch(hErr) {
+        console.error("[AUTH STATE CHANGE] Erro em loadH:", hErr.message);
+        hist = []; // Falhar gracefully
+      }
       
       console.log("[AUTH STATE CHANGE] Renderizando home...");
       renderHome();
@@ -354,7 +362,7 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
       show('s-auth');
     }
   } catch(err) {
-    console.error("[AUTH STATE CHANGE EXCEPTION]", err);
+    console.error("[AUTH STATE CHANGE EXCEPTION]", err.message, err);
   }
 });
 
@@ -409,30 +417,40 @@ async function logout(){
 }
 
 async function loadH(){
+  console.log("[LOAD HISTORY] Iniciando...");
   console.log("[LOAD HISTORY] currentUser:", currentUser?.email);
   if(!currentUser) {
-    console.warn("[LOAD HISTORY] Sem usuário, retornando");
+    console.warn("[LOAD HISTORY] Sem usuário");
     hist = [];
     return;
   }
+  
   try {
-    const { data, error } = await supabaseClient
-      .from('historico_treino')
-      .select('dados_treino')
-      .eq('user_id', currentUser.id)
-      .order('id', { ascending: false });
-
+    console.log("[LOAD HISTORY] Consultando Supabase...");
+    
+    const { data, error } = await Promise.race([
+      supabaseClient
+        .from('historico_treino')
+        .select('dados_treino')
+        .eq('user_id', currentUser.id)
+        .order('id', { ascending: false }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 10s")), 10000))
+    ]);
+    
     if(error){
-      console.error("[LOAD HISTORY ERROR]", error);
+      console.error("[LOAD HISTORY] Erro:", error);
       hist = [];
     } else {
-      console.log("[LOAD HISTORY OK]", data?.length || 0, "treinos");
+      console.log("[LOAD HISTORY] ✓ Sucesso! Dados:", data?.length || 0);
       hist = data.map(item => item.dados_treino);
+      console.log("[LOAD HISTORY] Histórico processado");
     }
   } catch(e) {
-    console.error("[LOAD HISTORY EXCEPTION]", e);
+    console.error("[LOAD HISTORY] Exceção:", e.message);
     hist = [];
   }
+  
+  console.log("[LOAD HISTORY] ✓ Completo!");
 }
 
 function getNext(){
