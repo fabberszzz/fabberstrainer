@@ -431,7 +431,6 @@ async function finishTreino() {
 
   const ex = T[cur.treino].ex;
   const novoTreino = {
-    id: Date.now(),
     treino: cur.treino,
     data: new Date().toLocaleDateString('pt-BR'),
     hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
