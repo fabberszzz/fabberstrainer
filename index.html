@@ -125,11 +125,16 @@
     <h2 class="cond" style="font-size:24px;margin-bottom:1.5rem;text-transform:uppercase;letter-spacing:1px">Diário de Treino Cloud</h2>
     <input type="email" id="auth-email" class="login-input" placeholder="Seu e-mail">
     <input type="password" id="auth-password" class="login-input" placeholder="Sua senha">
-    <div style="display:flex;gap:8px;margin-top:8px">
+    <div style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:13px">
+      <input type="checkbox" id="auth-remember" style="cursor:pointer">
+      <label for="auth-remember" style="cursor:pointer;color:var(--sub)">Manter conectado</label>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn btn-ghost" style="padding:10px" onclick="handleAuth('signup', event)">Criar Conta</button>
       <button class="btn btn-acc" style="padding:10px" onclick="handleAuth('login', event)">Entrar</button>
     </div>
     <div id="auth-error" style="color:var(--red);font-size:13px;margin-top:12px;font-weight:500;"></div>
+    <div id="auth-success" style="color:var(--acc2);font-size:13px;margin-top:12px;font-weight:500;"></div>
   </div>
 </div>
 
@@ -239,8 +244,11 @@ async function handleAuth(type, event){
   if(event) event.preventDefault();
   const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
+  const rememberMe = document.getElementById('auth-remember').checked;
   const errorEl = document.getElementById('auth-error');
+  const successEl = document.getElementById('auth-success');
   errorEl.textContent = "";
+  successEl.textContent = "";
 
   if(!email || !password) { errorEl.textContent = "Por favor, preencha todos os campos."; return; }
   if(password.length < 6) { errorEl.textContent = "A senha deve ter pelo menos 6 caracteres."; return; }
@@ -252,12 +260,29 @@ async function handleAuth(type, event){
       if(res.error) {
         errorEl.textContent = "Erro ao criar conta: " + res.error.message;
       } else {
-        alert("Conta criada com sucesso! Agora clique em 'Entrar'.");
+        successEl.textContent = "Conta criada com sucesso! Clique em 'Entrar' para acessar.";
+        setTimeout(() => { document.getElementById('auth-email').value = email; }, 500);
       }
     } else {
       res = await supabaseClient.auth.signInWithPassword({email, password});
       if(res.error) {
         errorEl.textContent = "Erro ao entrar: " + res.error.message;
+      } else if(res.data?.session){
+        successEl.textContent = "Login realizado! Entrando...";
+        
+        // Salvar opção de "Manter Conectado"
+        if(rememberMe) {
+          localStorage.setItem('keep_logged_in', 'true');
+          localStorage.setItem('auth_email', email);
+        } else {
+          localStorage.removeItem('keep_logged_in');
+          localStorage.removeItem('auth_email');
+        }
+        
+        currentUser = res.data.session.user;
+        await loadH();
+        renderHome();
+        show('s-home');
       }
     }
   } catch(err) {
@@ -278,7 +303,25 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
   }
 });
 
-async function logout(){ await supabaseClient.auth.signOut(); }
+// Restaurar sessão ao carregar a página se "Manter Conectado" estava ativo
+window.addEventListener('load', async () => {
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if(!session && localStorage.getItem('keep_logged_in') === 'true'){
+      // Sessão expirou mas usuário quer manter conectado
+      // Supabase vai tentar restaurar automaticamente via token
+      console.log("Tentando restaurar sessão persistida...");
+    }
+  } catch(err) {
+    console.error("Erro ao restaurar sessão:", err);
+  }
+});
+
+async function logout(){ 
+  localStorage.removeItem('keep_logged_in');
+  localStorage.removeItem('auth_email');
+  await supabaseClient.auth.signOut(); 
+}
 
 async function loadH(){
   if(!currentUser) return;
@@ -430,24 +473,30 @@ async function finishTreino() {
       if (error) {
         alert("Erro ao salvar no Supabase: " + error.message);
         console.error(error);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Finalizar treino";
+        }
       } else {
-        alert("Treino salvo com sucesso na nuvem! 💪");
+        alert("✓ Treino salvo com sucesso na nuvem! 💪");
+        await loadH();
+        goHome();
       }
     } catch (err) {
       alert("Erro inesperado na conexão ao salvar.");
       console.error(err);
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Finalizar treino";
+      }
     }
   } else {
-    alert("Usuário não identificado. Faça o login novamente.");
+    alert("⚠️ Usuário não identificado. Faça o login novamente.");
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Finalizar treino";
+    }
   }
-
-  if (btn) {
-    btn.disabled = false;
-    btn.textContent = "Finalizar treino";
-  }
-  
-  await loadH();
-  goHome();
 }
 
 function goHome(){renderHome();show('s-home');}
@@ -464,7 +513,12 @@ function renderHist(f){
     const detail=(sess.exercicios||[]).map(e=>{
       const v=e.series.filter(s=>s.t==='V'&&s.kg&&s.reps);
       if(!v.length)return'';
-      return`<div class="hist-ex-row"><div class="hist-ex-name">${e.nome}</div><div class="hist-ex-data">${v.map(s=>`${s.kg}×${s.reps}`).join(' · ')}</div></div>`;
+      let row=`<div class="hist-ex-row"><div class="hist-ex-name">${e.nome}</div><div class="hist-ex-data">${v.map(s=>`${s.kg}×${s.reps}`).join(' · ')}</div></div>`;
+      // Adicionar observações se existirem
+      if(e.series && e.series[0] && e.series[0].obs) {
+        row += `<div style="font-size:12px;color:var(--sub);margin-top:4px;padding-top:4px;border-top:1px solid var(--line)">Nota: ${e.series[0].obs}</div>`;
+      }
+      return row;
     }).join('');
     // Aqui geramos um identificador único para o clique baseado nas informações do treino
     const uniqueId = sess.id || Math.floor(Math.random() * 1000000);
