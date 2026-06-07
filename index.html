@@ -200,14 +200,11 @@
 </div>
 
 <script>
-<script>
 // IMPORTANTE: Limpar cache do Service Worker IMEDIATAMENTE
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(registrations => {
-    console.log("[SW CLEANUP] Encontrados", registrations.length, "service workers");
     for(let registration of registrations) {
-      registration.unregister().then(() => {
-        console.log("[SW CLEANUP] ✓ Service Worker desregistrado");
+      registration.unregister();
       });
     }
   });
@@ -216,13 +213,12 @@ if ('serviceWorker' in navigator) {
 // Limpar cache do navegador
 if ('caches' in window) {
   caches.keys().then(names => {
-    console.log("[CACHE CLEANUP] Encontrados", names.length, "caches");
     names.forEach(name => {
-      caches.delete(name).then(() => {
-        console.log("[CACHE CLEANUP] ✓ Cache deletado:", name);
-      });
+      caches.delete(name);
     });
-  </script>
+  });
+}
+</script>
 
 <script>
 // CONFIGURAÇÃO SUPABASE
@@ -388,7 +384,7 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
         console.log("[AUTH STATE CHANGE] Carregando histórico...");
         await Promise.race([
           loadH(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("loadH timeout")), 5000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error("loadH timeout")), 10000))
         ]);
         console.log("[AUTH STATE CHANGE] ✓ Histórico carregado");
       } catch(hErr) {
