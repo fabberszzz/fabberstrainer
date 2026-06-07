@@ -5,6 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Meu Diário de Treino</title>
   
+  <script>
+  // PRIMEIRO: Limpar Service Worker IMEDIATAMENTE
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(reg => reg.unregister());
+    });
+  }
+  // Limpar cache
+  if ('caches' in window) {
+    caches.keys().then(names => {
+      names.forEach(name => caches.delete(name));
+    });
+  }
+  </script>
+  
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js"></script>
   
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
@@ -176,6 +191,31 @@
   <div class="filter-row" id="hist-filter"></div>
   <div id="hist-body"></div>
 </div>
+
+<script>
+<script>
+// IMPORTANTE: Limpar cache do Service Worker IMEDIATAMENTE
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    console.log("[SW CLEANUP] Encontrados", registrations.length, "service workers");
+    for(let registration of registrations) {
+      registration.unregister().then(() => {
+        console.log("[SW CLEANUP] ✓ Service Worker desregistrado");
+      });
+    }
+  });
+}
+
+// Limpar cache do navegador
+if ('caches' in window) {
+  caches.keys().then(names => {
+    console.log("[CACHE CLEANUP] Encontrados", names.length, "caches");
+    names.forEach(name => {
+      caches.delete(name).then(() => {
+        console.log("[CACHE CLEANUP] ✓ Cache deletado:", name);
+      });
+    });
+  </script>
 
 <script>
 // CONFIGURAÇÃO SUPABASE
