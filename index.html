@@ -135,7 +135,14 @@
 </head>
 <body>
 
-<div id="s-auth" class="screen active">
+<div id="s-splash" class="screen active" style="display:flex;align-items:center;justify-content:center;min-height:100vh">
+  <div style="text-align:center;color:var(--txt)">
+    <div class="cond" style="font-size:32px;margin-bottom:1rem">Carregando...</div>
+    <div style="color:var(--sub)">Restaurando sessão...</div>
+  </div>
+</div>
+
+<div id="s-auth" class="screen">
   <div class="login-container">
     <h2 class="cond" style="font-size:24px;margin-bottom:1.5rem;text-transform:uppercase;letter-spacing:1px">Diário de Treino Cloud</h2>
     <input type="email" id="auth-email" class="login-input" placeholder="Seu e-mail">
@@ -400,21 +407,21 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
       // Marcar que autenticação completou
       authInitialized = true;
     } else {
-      console.log("[AUTH STATE CHANGE] ✓ SIGNED_OUT");
+      console.log("[AUTH STATE CHANGE] ✓ SIGNED_OUT ou sem sessão");
       currentUser = null;
-      // Só mostrar login se estamos realmente inicializando (não no meio de logout)
-      if(!authInitialized) {
-        console.log("[AUTH STATE CHANGE] Showing login screen (initial load)");
-        show('s-auth');
-      } else {
-        console.log("[AUTH STATE CHANGE] User logged out, showing login");
+      
+      // Se já inicializou, mostrar login
+      if(authInitialized) {
+        console.log("[AUTH STATE CHANGE] User logged out, mostrando login");
         show('s-auth');
         authInitialized = false;
+      } else {
+        // Ainda está inicializando, manter splash
+        console.log("[AUTH STATE CHANGE] Ainda inicializando, mantendo splash");
       }
     }
   } catch(err) {
     console.error("[AUTH STATE CHANGE EXCEPTION]", err.message, err);
-    show('s-auth');
   }
 });
 
@@ -423,25 +430,29 @@ let authInitialized = false;
 
 async function initializeAuth() {
   if(authInitialized) return;
-  authInitialized = true;
   
   console.log("[INIT AUTH] Aguardando Supabase restaurar sessão...");
   
-  // Dar tempo para onAuthStateChange dispara com sessão restaurada
-  await new Promise(r => setTimeout(r, 1000));
+  // Dar tempo para onAuthStateChange disparar com sessão restaurada
+  await new Promise(r => setTimeout(r, 2000));
   
-  // Se ainda não tem sessão ativa, mostrar login
+  console.log("[INIT AUTH] Timeout de espera completado");
+  console.log("[INIT AUTH] currentUser:", currentUser?.email);
+  
+  // Se ainda não tem sessão após espera, mostrar login
   if(!currentUser) {
-    console.log("[INIT AUTH] Sem sessão após espera, mostrando login");
+    console.log("[INIT AUTH] Nenhuma sessão encontrada, mostrando tela de login");
     show('s-auth');
   } else {
-    console.log("[INIT AUTH] ✓ Sessão restaurada durante espera");
+    console.log("[INIT AUTH] ✓ Sessão foi restaurada");
   }
+  
+  authInitialized = true;
 }
 
 // Executar assim que DOM estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
-  console.log("[DOM READY] Inicializando autenticação");
+  console.log("[DOM READY] Inicializando autenticação com splash screen");
   initializeAuth();
 });
 
