@@ -286,10 +286,15 @@ async function handleAuth(type, event){
         
         // NÃO confiar apenas no onAuthStateChange - fazer manualmente também
         currentUser = res.data.session.user;
-        console.log("CurrentUser definido:", currentUser.email);
+        console.log("[MANUAL LOGIN] CurrentUser definido:", currentUser.email);
+        
+        console.log("[MANUAL LOGIN] Carregando histórico...");
         await loadH();
+        console.log("[MANUAL LOGIN] Histórico carregado, renderizando home...");
         renderHome();
+        console.log("[MANUAL LOGIN] Home renderizado, mudando tela...");
         show('s-home');
+        console.log("[MANUAL LOGIN] ✓ Login completado!");
       } else {
         errorEl.textContent = "Erro: Nenhuma sessão retornada";
         console.warn("Sem sessão na resposta:", res);
